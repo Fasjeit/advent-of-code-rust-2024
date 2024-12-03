@@ -1,12 +1,12 @@
 advent_of_code::solution!(3);
 
 pub fn part_one(input: &str) -> Option<u32> {
-    let result = state_machine_parser(&input);
+    let result = state_machine_parser(input);
     Some(result)
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    let result = state_machine_parser_with_do(&input);
+    let result = state_machine_parser_with_do(input);
     Some(result)
 }
 
@@ -166,43 +166,43 @@ mod tests {
     #[test]
     fn test_format_and_return() {
         let correct = "mul(5,5)";
-        let result = state_machine_parser(&correct);
+        let result = state_machine_parser(correct);
         assert_eq!(result, 25);
 
         let double_correct = "mul(5,5)mul(2,2)";
-        let result = state_machine_parser(&double_correct);
+        let result = state_machine_parser(double_correct);
         assert_eq!(result, 29);
 
         let double_correct_garbage_space = "mul(5,5)______________mul(2,2)";
-        let result = state_machine_parser(&double_correct_garbage_space);
+        let result = state_machine_parser(double_correct_garbage_space);
         assert_eq!(result, 29);
 
         let double_correct_garbage_sides = "_____mul(5,5)mul(2,2)______";
-        let result = state_machine_parser(&double_correct_garbage_sides);
+        let result = state_machine_parser(double_correct_garbage_sides);
         assert_eq!(result, 29);
 
         let double_correct_garbage_space_unfinished = "mul(5,5)mulmul(2mul(2,mulmul(2,2)";
-        let result = state_machine_parser(&double_correct_garbage_space_unfinished);
+        let result = state_machine_parser(double_correct_garbage_space_unfinished);
         assert_eq!(result, 29);
 
         let double_correct_garbage_sides_unfinished =
             "mulmul(2mul(2,mulmul(5,5)mul(2,2)mulmul(2mul(2,mul";
-        let result = state_machine_parser(&double_correct_garbage_sides_unfinished);
+        let result = state_machine_parser(double_correct_garbage_sides_unfinished);
         assert_eq!(result, 29);
     }
 
     #[test]
     fn test_format_and_return_with_do() {
         let correct = "mul(5,5)";
-        let result = state_machine_parser_with_do(&correct);
+        let result = state_machine_parser_with_do(correct);
         assert_eq!(result, 25);
 
         let double_correct = "mul(5,5)mul(2,2)";
-        let result = state_machine_parser_with_do(&double_correct);
+        let result = state_machine_parser_with_do(double_correct);
         assert_eq!(result, 29);
 
         let double_correct_do_second = "don't()mul(5,5)do()mul(2,2)";
-        let result = state_machine_parser_with_do(&double_correct_do_second);
+        let result = state_machine_parser_with_do(double_correct_do_second);
         assert_eq!(result, 4);
     }
 }
