@@ -11,7 +11,7 @@ pub fn part_two(input: &str) -> Option<u32> {
 }
 
 enum State {
-    Init,
+    Init(char),
     Mul(char),
     LeftBracket,
     LeftValue(char),
@@ -24,15 +24,17 @@ enum State {
 
 fn state_machine_parser(input: &str) -> u32 {
     const RADIX: u32 = 10;
-    let mut s = State::Init;
+    let empty_char = ' ';
+
+    let mut s = State::Init(empty_char);
     let mut left_value = 0;
     let mut right_value = 0;
     let mut acc = 0;
 
-    let empty_char = ' ';
     for c in input.chars() {
         s = match (s, c) {
-            (State::Init, 'm') => State::Mul('m'),
+            (State::Init('m'), 'u') => State::Mul('u'), // last Init maybe be with 'm' like in "mumul"
+            (State::Init(_), 'm') => State::Mul('m'),
             (State::Mul('m'), 'u') => State::Mul('u'),
             (State::Mul('u'), 'l') => State::LeftBracket,
             (State::LeftBracket, '(') => State::LeftValue(empty_char),
@@ -44,7 +46,7 @@ fn state_machine_parser(input: &str) -> u32 {
                     State::RightValue(empty_char)
                 } else {
                     (left_value, right_value) = (0, 0);
-                    State::Init
+                    State::Init(c)
                 }
             }
             (State::RightValue(_cl), ci) => {
@@ -55,15 +57,15 @@ fn state_machine_parser(input: &str) -> u32 {
                     // do return value here, everything is ok
                     acc += left_value * right_value;
                     (left_value, right_value) = (0, 0);
-                    State::Init
+                    State::Init(c)
                 } else {
                     (left_value, right_value) = (0, 0);
-                    State::Init
+                    State::Init(c)
                 }
             }
             _ => {
                 (left_value, right_value) = (0, 0);
-                State::Init
+                State::Init(c)
             }
         }
     }
@@ -72,14 +74,14 @@ fn state_machine_parser(input: &str) -> u32 {
 
 fn state_machine_parser_with_do(input: &str) -> u32 {
     const RADIX: u32 = 10;
-    let mut s = State::Init;
+    // no prev char state label
+    let empty_char = ' ';
+
+    let mut s = State::Init(empty_char);
     let mut left_value = 0;
     let mut right_value = 0;
     let mut acc = 0;
     let mut active = true;
-
-    // no prev char state label
-    let empty_char = ' ';
 
     // [ is don't open bracket '(' state label
     let dont_open_bracket_char_state = '[';
@@ -87,12 +89,13 @@ fn state_machine_parser_with_do(input: &str) -> u32 {
         s = match (s, c, active) {
             // begin part 2
             // do()
-            (State::Init, 'd', _) => State::DoDont('d'),
+            (State::Init('d'), 'o', _) => State::DoDont('o'),
+            (State::Init(_), 'd', _) => State::DoDont('d'), // last Init maybe be with 'd' like in "ddo"
             (State::DoDont('d'), 'o', _) => State::DoDont('o'),
             (State::DoDont('o'), '(', _) => State::DoDont('('),
             (State::DoDont('('), ')', _) => {
                 active = true;
-                State::Init
+                State::Init(c)
             }
             // don't()
             (State::DoDont('o'), 'n', _) => State::DoDont('n'),
@@ -101,11 +104,12 @@ fn state_machine_parser_with_do(input: &str) -> u32 {
             (State::DoDont('t'), '(', _) => State::DoDont(dont_open_bracket_char_state),
             (State::DoDont(_dont_open_bracket_char_state), ')', _) => {
                 active = false;
-                State::Init
+                State::Init(c)
             }
             // end part 2
             // parse only if active
-            (State::Init, 'm', true) => State::Mul('m'),
+            (State::Init('m'), 'u', true) => State::Mul('u'), // last Init maybe be with 'm' like in "mumul"
+            (State::Init(_), 'm', true) => State::Mul('m'),
             (State::Mul('m'), 'u', true) => State::Mul('u'),
             (State::Mul('u'), 'l', true) => State::LeftBracket,
             (State::LeftBracket, '(', true) => State::LeftValue(empty_char),
@@ -117,7 +121,7 @@ fn state_machine_parser_with_do(input: &str) -> u32 {
                     State::RightValue(empty_char)
                 } else {
                     (left_value, right_value) = (0, 0);
-                    State::Init
+                    State::Init(c)
                 }
             }
             (State::RightValue(_cl), ci, true) => {
@@ -128,15 +132,15 @@ fn state_machine_parser_with_do(input: &str) -> u32 {
                     // do return value here, everything is ok
                     acc += left_value * right_value;
                     (left_value, right_value) = (0, 0);
-                    State::Init
+                    State::Init(c)
                 } else {
                     (left_value, right_value) = (0, 0);
-                    State::Init
+                    State::Init(c)
                 }
             }
             _ => {
                 (left_value, right_value) = (0, 0);
-                State::Init
+                State::Init(c)
             }
         }
     }
@@ -189,6 +193,10 @@ mod tests {
             "mulmul(2mul(2,mulmul(5,5)mul(2,2)mulmul(2mul(2,mul";
         let result = state_machine_parser(double_correct_garbage_sides_unfinished);
         assert_eq!(result, 29);
+
+        let incomplete_garbage = "mumul(5,5)";
+        let result = state_machine_parser(incomplete_garbage);
+        assert_eq!(result, 25);
     }
 
     #[test]
@@ -203,6 +211,18 @@ mod tests {
 
         let double_correct_do_second = "don't()mul(5,5)do()mul(2,2)";
         let result = state_machine_parser_with_do(double_correct_do_second);
+        assert_eq!(result, 4);
+
+        let incomplete_garbage = "mumul(5,5)";
+        let result = state_machine_parser(incomplete_garbage);
+        assert_eq!(result, 25);
+
+        let incomplete_garbage_do = "don't()mul(5,5)dodo()mul(2,2)";
+        let result = state_machine_parser_with_do(incomplete_garbage_do);
+        assert_eq!(result, 4);
+
+        let incomplete_garbage_dont = "dodon't()mul(5,5)ddo()mul(2,2)";
+        let result = state_machine_parser_with_do(incomplete_garbage_dont);
         assert_eq!(result, 4);
     }
 }
