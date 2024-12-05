@@ -1,113 +1,126 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
-use std::result;
 use std::str::FromStr;
-
-// use petgraph::graph::{NodeIndex, DiGraph};
-// use petgraph::algo::{dijkstra, min_spanning_tree};
-// use petgraph::data::FromElements;
-// use petgraph::dot::{Dot, Config};
-// use petgraph::unionfind::UnionFind;
-// use petgraph::visit::NodeIndexable;
-// use petgraph::visit::EdgeRef;
-// use petgraph::algo::has_path_connecting;
 
 advent_of_code::solution!(5);
 
 pub fn part_one(input: &str) -> Option<u32> {
-    let mut iterator =
-        input.split("\n\n").into_iter();
+    solve(input, &Day5::Part1)
+}
+
+pub fn part_two(input: &str) -> Option<u32> {
+    solve(input, &Day5::Part2)
+}
+
+enum Day5 {
+    Part1,
+    Part2
+}
+
+fn solve(input :&str, part: &Day5) -> Option<u32>
+{
+    let mut iterator = input.split("\n\n");
     let graph_data = iterator.next().unwrap();
     let sort_data = iterator.next().unwrap();
 
     let (parsed_graph_data, _size) = parse_2_tuple_input_with_delimiter::<u32>(graph_data, '|');
-    let g = create_graph::<u32>(parsed_graph_data);
+    let (lines, _size) = parse_row_input::<u32>(sort_data, ',');
 
-    let (lines, size) = parse_row_input::<usize>(sort_data, ',');
+    let mut rules:HashMap<u32, Vec<u32>> = HashMap::new();
+    parsed_graph_data.into_iter().for_each(|d| {
+        rules.entry(d.0)
+             .and_modify(|v| v.push(d.1))
+             .or_insert(vec![d.1]);});
 
-    //let mut res:Vec<bool> =Vec::with_capacity(lines.len());
     let mut acc = 0;
-    for i in 0..lines.len()
+    for line in lines
     {
-        //res.push(check_order(&g, &lines[i]));
-        if check_order(&g, &lines[i])
-        {
-            let middle_index = &lines[i].len()/2;
-            acc += lines[i][middle_index];
+        let current_line = &line;
+
+        // Pre building graph not working due to cycles in the initial graph
+        // From reddit -
+        // The fact that the looping cases never appear in
+        // the same test case means it works as long as you
+        // only dfs over numbers that are in the same test
+        // case.
+        //
+        // `node_set` is a set of all nodes for current task.
+        // Only nods from `node_set` used for dfs path finding.
+
+        let mut node_set:HashSet<u32> = HashSet::new();
+        current_line.iter().for_each(|e| {node_set.insert(*e);});
+
+        let mut visited: HashSet<u32> = HashSet::new();
+        let mut top_sort: Vec<u32> = Vec::new();
+
+        //dbg!(&node_set);
+
+        // first node we use to sort may not be the smallest one
+        // so we add all other nodes to dfs, which was not met before.
+
+        dfs(current_line[0], &node_set, &mut visited, &mut top_sort, &rules);
+        while node_set.len() != visited.len(){
+            let node = node_set.iter().find(|n| !visited.contains(n)).unwrap();
+            dfs(*node, &node_set, &mut visited, &mut top_sort, &rules);
+        }
+
+        //dbg!(current_line);
+        //dbg!(&top_sort);
+
+        let same = compare_inv(current_line, &top_sort);
+        match (part, same) {
+            (Day5::Part1, true)=>
+            {
+                let middle_index = &line.len()/2;
+                acc += line[middle_index];
+            }
+            (Day5::Part2, false)=>
+            {
+                let middle_index = &top_sort.len()/2;
+                acc += top_sort[middle_index];
+                //dbg!(current_line.len());
+                //dbg!(acc);
+                //dbg!(top_sort.len()); }
+            },
+            _ => ()
         }
     }
 
-    // Not working due to cycles in the initial graph
-    // From reddit -
-    // The fact that the looping cases never appear in
-    // the same test case means it works as long as you
-    // only dfs over numbers that are in the same test
-    // case (correct me if I'm wrong)
-
-    //dbg!(res);
-
-    Some(acc as u32)
+    Some(acc)
 }
 
-pub fn part_two(input: &str) -> Option<u32> {
-    None
+fn compare_inv(first:&[u32], second:&[u32]) -> bool{
+    if first.len() != second.len()
+    {
+        return false;
+    }
+    for i in 0..first.len() {
+        if first[i] != second[second.len()-i-1]
+        {
+            return false;
+        }
+    }
+    true
 }
 
 fn dfs(
-    node: i32,
-    node_set :HashSet<i32>,
-    visited: &mut HashSet<i32>,
-    topsort: &mut Vec<i32>,
-    rules: &HashMap<i32, Vec<i32>>,
+    node: u32,
+    node_set :&HashSet<u32>, // need to filter paths only to the present nods for a row to avoid cycles
+    visited: &mut HashSet<u32>,
+    top_sort: &mut Vec<u32>,
+    rules: &HashMap<u32, Vec<u32>>,
 ) {
     if visited.contains(&node) {
         return;
     }
-    visited.insert(&node)
+    visited.insert(node);
     for dst in rules.get(&node).unwrap_or(&vec![]) {
         if !node_set.contains(dst) {
             continue;
         }
-        dfs(*dst,node_set, visited, topsort, rules);
+        dfs(*dst,node_set, visited, top_sort, rules);
     }
-    topsort.push(node);
-}
-
-fn create_graph<T>(data :Vec<(T,T)>) -> DiGraph<T, ()>
-where
-    T: std::marker::Copy,
-    T: Into<NodeIndex>,
-    T: Default
-{
-    return DiGraph::<T, ()>::from_edges(&data);
-}
-
-fn has_path<T>(g : &DiGraph<T, ()>, path:(usize,usize))->bool
-where
-    T: std::marker::Copy,
-    T: Into<NodeIndex>
-{
-    let has_path = has_path_connecting(g, NodeIndex::new(path.0),NodeIndex::new(path.1), None);
-    has_path
-}
-
-fn compare<T>(g : &DiGraph<T, ()>, first:usize, second:usize)-> i32
-where T: Into<NodeIndex>,
-T: std::marker::Copy,
-{
-    return if has_path(g, (first, second)) { -1 } else { 1};
-}
-
-fn check_order<T>(g : &DiGraph<T, ()>, data:&Vec<usize>) -> bool
-where T: Into<NodeIndex>,
-T: std::marker::Copy,
-{
-    for i in 1..data.len()
-    {
-        if compare(g, data[i-1], data[i]) > 0 { return false;}
-    }
-
-    return true;
+    top_sort.push(node);
 }
 
 fn parse_row_input<T>(input: &str, delimiter: char) -> (Vec<Vec<T>>, usize)
@@ -166,35 +179,27 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_graph_build() {
-        let data = vec![(1,2),(97,13),(97,61)];
-        let g = create_graph(data);
+    fn test_top_sort(){
+        let node = 47;
 
-        let res = has_path(&g, (1,2));
-        assert_eq!(res, true);
+        let mut node_set:HashSet<u32> = HashSet::new();
+        node_set.insert(47);
+        node_set.insert(53);
+        node_set.insert(13);
+        node_set.insert(61);
 
-        let res = has_path(&g, (2,1));
-        assert_eq!(res, false);
+        let mut rules:HashMap<u32, Vec<u32>> = HashMap::new();
+        rules.insert(47, vec![53,13]);
+        rules.insert(53, vec![13,61]);
+        rules.insert(13, vec![61]);
 
-        let res = has_path(&g, (1,1));
-        assert_eq!(res, true);
+        let mut visited: HashSet<u32> = HashSet::new();
+        let mut top_sort: Vec<u32> = Vec::new();
 
-        let res = has_path(&g, (1,13));
-        assert_eq!(res, false);
+        dfs(node, &node_set, &mut visited, &mut top_sort, &rules);
 
-        // compare
+        assert_eq!(top_sort, vec![61,13,53,47])
 
-        let res = compare(&g, 1,2);
-        assert_eq!(res, -1);
-
-        let res = compare(&g, 2,1);
-        assert_eq!(res, 1);
-
-        let res = compare(&g, 1,13); // for non comparable is always true (no path)
-        assert_eq!(res, 1);
-
-        let res = compare(&g, 13,1); // for non comparable is always true (no path)
-        assert_eq!(res, 1);
     }
 
     #[test]
@@ -209,13 +214,19 @@ mod tests {
 
     #[test]
     fn test_part_one() {
-        let result = part_one(&advent_of_code::template::read_file("examples", DAY));
+        let result = part_one(&advent_of_code::template::read_file_part("examples", DAY, 1));
         assert_eq!(result, Some(143));
     }
 
     #[test]
     fn test_part_two() {
-        let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        let result = part_two(&advent_of_code::template::read_file_part("examples", DAY, 1));
+        assert_eq!(result, Some(123));
+    }
+
+    #[test]
+    fn test_part_two_debugging() {
+        let result = part_two(&advent_of_code::template::read_file_part("examples", DAY, 2));
+        assert_eq!(result, Some(78));
     }
 }
