@@ -8,7 +8,7 @@ pub fn part_one(input: &str) -> Option<u32> {
     let matrix = Matrix { size, data };
 
     let mut acc = 0;
-
+    
     for y in 0..size.y {
         for x in 0..size.x {
             //print!("{}", matrix[y][x]);

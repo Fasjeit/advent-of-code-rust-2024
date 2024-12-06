@@ -14,27 +14,27 @@ pub fn part_two(input: &str) -> Option<u32> {
 
 enum Day5 {
     Part1,
-    Part2
+    Part2,
 }
 
-fn solve(input :&str, part: &Day5) -> Option<u32>
-{
-    let mut iterator = input.split("\n\n");
+fn solve(input: &str, part: &Day5) -> Option<u32> {
+    let mut iterator = input.split("\r\n\r\n");
     let graph_data = iterator.next().unwrap();
     let sort_data = iterator.next().unwrap();
 
     let (parsed_graph_data, _size) = parse_2_tuple_input_with_delimiter::<u32>(graph_data, '|');
     let (lines, _size) = parse_row_input::<u32>(sort_data, ',');
 
-    let mut rules:HashMap<u32, Vec<u32>> = HashMap::new();
+    let mut rules: HashMap<u32, Vec<u32>> = HashMap::new();
     parsed_graph_data.into_iter().for_each(|d| {
-        rules.entry(d.0)
-             .and_modify(|v| v.push(d.1))
-             .or_insert(vec![d.1]);});
+        rules
+            .entry(d.0)
+            .and_modify(|v| v.push(d.1))
+            .or_insert(vec![d.1]);
+    });
 
     let mut acc = 0;
-    for line in lines
-    {
+    for line in lines {
         let current_line = &line;
 
         // Pre building graph not working due to cycles in the initial graph
@@ -47,8 +47,10 @@ fn solve(input :&str, part: &Day5) -> Option<u32>
         // `node_set` is a set of all nodes for current task.
         // Only nods from `node_set` used for dfs path finding.
 
-        let mut node_set:HashSet<u32> = HashSet::new();
-        current_line.iter().for_each(|e| {node_set.insert(*e);});
+        let mut node_set: HashSet<u32> = HashSet::new();
+        current_line.iter().for_each(|e| {
+            node_set.insert(*e);
+        });
 
         let mut visited: HashSet<u32> = HashSet::new();
         let mut top_sort: Vec<u32> = Vec::new();
@@ -58,8 +60,14 @@ fn solve(input :&str, part: &Day5) -> Option<u32>
         // first node we use to sort may not be the smallest one
         // so we add all other nodes to dfs, which was not met before.
 
-        dfs(current_line[0], &node_set, &mut visited, &mut top_sort, &rules);
-        while node_set.len() != visited.len(){
+        dfs(
+            current_line[0],
+            &node_set,
+            &mut visited,
+            &mut top_sort,
+            &rules,
+        );
+        while node_set.len() != visited.len() {
             let node = node_set.iter().find(|n| !visited.contains(n)).unwrap();
             dfs(*node, &node_set, &mut visited, &mut top_sort, &rules);
         }
@@ -69,34 +77,30 @@ fn solve(input :&str, part: &Day5) -> Option<u32>
 
         let same = compare_inv(current_line, &top_sort);
         match (part, same) {
-            (Day5::Part1, true)=>
-            {
-                let middle_index = &line.len()/2;
+            (Day5::Part1, true) => {
+                let middle_index = &line.len() / 2;
                 acc += line[middle_index];
             }
-            (Day5::Part2, false)=>
-            {
-                let middle_index = &top_sort.len()/2;
+            (Day5::Part2, false) => {
+                let middle_index = &top_sort.len() / 2;
                 acc += top_sort[middle_index];
                 //dbg!(current_line.len());
                 //dbg!(acc);
                 //dbg!(top_sort.len()); }
-            },
-            _ => ()
+            }
+            _ => (),
         }
     }
 
     Some(acc)
 }
 
-fn compare_inv(first:&[u32], second:&[u32]) -> bool{
-    if first.len() != second.len()
-    {
+fn compare_inv(first: &[u32], second: &[u32]) -> bool {
+    if first.len() != second.len() {
         return false;
     }
     for i in 0..first.len() {
-        if first[i] != second[second.len()-i-1]
-        {
+        if first[i] != second[second.len() - i - 1] {
             return false;
         }
     }
@@ -105,7 +109,7 @@ fn compare_inv(first:&[u32], second:&[u32]) -> bool{
 
 fn dfs(
     node: u32,
-    node_set :&HashSet<u32>, // need to filter paths only to the present nods for a row to avoid cycles
+    node_set: &HashSet<u32>, // need to filter paths only to the present nods for a row to avoid cycles
     visited: &mut HashSet<u32>,
     top_sort: &mut Vec<u32>,
     rules: &HashMap<u32, Vec<u32>>,
@@ -118,7 +122,7 @@ fn dfs(
         if !node_set.contains(dst) {
             continue;
         }
-        dfs(*dst,node_set, visited, top_sort, rules);
+        dfs(*dst, node_set, visited, top_sort, rules);
     }
     top_sort.push(node);
 }
@@ -145,7 +149,7 @@ where
     (result, size)
 }
 
-fn parse_2_tuple_input_with_delimiter<T>(input: &str, delimiter: char) -> (Vec<(T,T)>, usize)
+fn parse_2_tuple_input_with_delimiter<T>(input: &str, delimiter: char) -> (Vec<(T, T)>, usize)
 where
     T: FromStr,
     <T as FromStr>::Err: Debug,
@@ -153,7 +157,7 @@ where
     let splitted_lines: Vec<&str> = input.lines().collect();
     let size = splitted_lines.len();
 
-    let mut result: Vec<(T,T)> = Vec::with_capacity(size);
+    let mut result: Vec<(T, T)> = Vec::with_capacity(size);
 
     for line in splitted_lines {
         let mut splitted = line.split(delimiter);
@@ -179,18 +183,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_top_sort(){
+    fn test_top_sort() {
         let node = 47;
 
-        let mut node_set:HashSet<u32> = HashSet::new();
+        let mut node_set: HashSet<u32> = HashSet::new();
         node_set.insert(47);
         node_set.insert(53);
         node_set.insert(13);
         node_set.insert(61);
 
-        let mut rules:HashMap<u32, Vec<u32>> = HashMap::new();
-        rules.insert(47, vec![53,13]);
-        rules.insert(53, vec![13,61]);
+        let mut rules: HashMap<u32, Vec<u32>> = HashMap::new();
+        rules.insert(47, vec![53, 13]);
+        rules.insert(53, vec![13, 61]);
         rules.insert(13, vec![61]);
 
         let mut visited: HashSet<u32> = HashSet::new();
@@ -198,8 +202,7 @@ mod tests {
 
         dfs(node, &node_set, &mut visited, &mut top_sort, &rules);
 
-        assert_eq!(top_sort, vec![61,13,53,47])
-
+        assert_eq!(top_sort, vec![61, 13, 53, 47])
     }
 
     #[test]
@@ -208,25 +211,31 @@ mod tests {
                           97|13\n\
                           97|61";
         let (result, size) = parse_2_tuple_input_with_delimiter::<u32>(data, '|');
-        assert_eq!(result, vec![(47,53),(97,13),(97,61)]);
+        assert_eq!(result, vec![(47, 53), (97, 13), (97, 61)]);
         assert_eq!(size, 3);
     }
 
     #[test]
     fn test_part_one() {
-        let result = part_one(&advent_of_code::template::read_file_part("examples", DAY, 1));
+        let result = part_one(&advent_of_code::template::read_file_part(
+            "examples", DAY, 1,
+        ));
         assert_eq!(result, Some(143));
     }
 
     #[test]
     fn test_part_two() {
-        let result = part_two(&advent_of_code::template::read_file_part("examples", DAY, 1));
+        let result = part_two(&advent_of_code::template::read_file_part(
+            "examples", DAY, 1,
+        ));
         assert_eq!(result, Some(123));
     }
 
     #[test]
     fn test_part_two_debugging() {
-        let result = part_two(&advent_of_code::template::read_file_part("examples", DAY, 2));
+        let result = part_two(&advent_of_code::template::read_file_part(
+            "examples", DAY, 2,
+        ));
         assert_eq!(result, Some(78));
     }
 }
