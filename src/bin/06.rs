@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::str::FromStr;
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 advent_of_code::solution!(6);
 
@@ -40,6 +42,12 @@ pub fn part_one(input: &str) -> Option<u32> {
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
+    part_two_mt(input)
+}
+
+pub fn part_two_st(input: &str) -> Option<u32> {
+    // Single thread version.
+
     let (data, size) = parse_row_input_as_data_array::<char>(input);
     let data_cells: Vec<MapCell> = data.into_iter().map(MapCell::from).collect();
 
@@ -123,6 +131,122 @@ pub fn part_two(input: &str) -> Option<u32> {
         }
     }
     Some(loop_counter)
+}
+
+pub fn part_two_mt(input: &str) -> Option<u32> {
+    // Rewrite of part 2 with multithread with a help of gpt.
+    // (I don't know rust multithreading yet...)
+
+    let (data, size) = parse_row_input_as_data_array::<char>(input);
+    let data_cells: Vec<MapCell> = data.into_iter().map(MapCell::from).collect();
+
+    let guard_position_index = data_cells
+        .iter()
+        .position(|c| c.have_guard_visited)
+        .expect("Cannot determine guard position!");
+
+    let initial_matrix = Matrix {
+        size,
+        data: data_cells.clone(),
+    };
+
+    let mut matrix = initial_matrix.clone();
+
+    let guard_initial_position = matrix.get_index_from_position(guard_position_index);
+    let mut guard = Guard::new(guard_initial_position);
+    let mut stop_counter = 10000000; // Safety value only.
+
+    while guard.traverse(&mut matrix, None) == TraverseResult::Continue && stop_counter > 0 {
+        //dbg!(guard.position);
+        //dbg!(&guard.direction);
+        //matrix.print();
+        stop_counter -= 1;
+    }
+
+    let total = matrix
+        .data
+        .iter()
+        .fold(0, |acc, c| if c.have_guard_visited { acc + 1 } else { acc });
+
+    let possible_block_locations = matrix
+        .data
+        .into_iter()
+        .enumerate()
+        .filter(|(index, c)| c.have_guard_visited && *index != guard_position_index);
+
+    let loop_counter = Arc::new(Mutex::new(0));
+    let iter_counter = Arc::new(Mutex::new(1));
+
+    // Vector to store thread handles
+    let mut handles = vec![];
+
+    for (index, change_cell) in possible_block_locations {
+        // Clone Arc references for the thread
+        let loop_counter = Arc::clone(&loop_counter);
+        let iter_counter = Arc::clone(&iter_counter);
+        let data_cells = data_cells.clone(); // Clone necessary data for the thread
+
+        // Spawn a thread
+        let handle = thread::spawn(move || {
+            let local_iter_counter;
+            {
+                let mut iter = iter_counter.lock().unwrap();
+                local_iter_counter = *iter;
+                *iter += 1; // Increment the shared counter
+            }
+
+            println!("Solving [{} / {}]", local_iter_counter, total - 1); // -1 for starting pos
+
+            // create new state set for collision detection
+            let mut guard_state_set: HashSet<(Index, Direction)> = HashSet::new();
+            // Change cell to Obstacle.
+            let mut new_cell = change_cell.clone();
+            new_cell.have_obstacle = true;
+            new_cell.have_added_obstacle = true;
+
+            // Create new map with obstacle.
+            let mut change_data_cells = data_cells;
+            change_data_cells[index] = new_cell;
+
+            let mut changed_matrix = Matrix {
+                size,
+                data: change_data_cells,
+            };
+
+            // Create new guard.
+            let mut guard = Guard::new(guard_initial_position);
+
+            // Traverse until exit or loop.
+            let mut stop_counter = 10000000; // Safety value only.
+            while stop_counter > 0 {
+                stop_counter -= 1;
+
+                match guard.traverse(&mut changed_matrix, Some(&mut guard_state_set)) {
+                    TraverseResult::Continue => (),
+                    TraverseResult::Exit => break, // stop checking this configuration.
+                    TraverseResult::Loop => {
+                        let mut loops = loop_counter.lock().unwrap();
+                        *loops += 1; // Increment shared loop counter
+
+                        //changed_matrix.print();
+                        //println!();
+
+                        break;
+                    } // loop found!;
+                };
+            }
+        });
+
+        handles.push(handle);
+    }
+
+    // Wait for all threads to complete
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    let x = Some(*loop_counter.lock().unwrap());
+    x
 }
 
 // fn check_cycles(guard_initial_position: Index, map: Matrix<MapCell>) -> bool {
@@ -379,6 +503,18 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
+        assert_eq!(result, Some(6));
+    }
+
+    #[test]
+    fn test_part_two_st() {
+        let result = part_two_st(&advent_of_code::template::read_file("examples", DAY));
+        assert_eq!(result, Some(6));
+    }
+
+    #[test]
+    fn test_part_two_mt() {
+        let result = part_two_mt(&advent_of_code::template::read_file("examples", DAY));
         assert_eq!(result, Some(6));
     }
 }
