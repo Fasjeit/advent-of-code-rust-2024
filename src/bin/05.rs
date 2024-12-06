@@ -18,9 +18,13 @@ enum Day5 {
 }
 
 fn solve(input: &str, part: &Day5) -> Option<u32> {
-    let mut iterator = input.split("\r\n\r\n");
-    let graph_data = iterator.next().unwrap();
-    let sort_data = iterator.next().unwrap();
+    let mut data: Vec<&str> = input.split("\r\n\r\n").collect();
+    if data.len() < 2 {
+        // Actual data split.
+        data = input.split("\n\n").collect();
+    }
+    let graph_data = data[0];
+    let sort_data = data[1];
 
     let (parsed_graph_data, _size) = parse_2_tuple_input_with_delimiter::<u32>(graph_data, '|');
     let (lines, _size) = parse_row_input::<u32>(sort_data, ',');
