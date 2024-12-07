@@ -42,7 +42,7 @@ fn solve(input: &str, part: &Day5) -> Option<u32> {
         let current_line = &line;
 
         // Pre building graph not working due to cycles in the initial graph
-        // From reddit -
+        // From reddit - https://www.reddit.com/r/adventofcode/comments/1h73c98/comment/m0ii028/
         // The fact that the looping cases never appear in
         // the same test case means it works as long as you
         // only dfs over numbers that are in the same test
