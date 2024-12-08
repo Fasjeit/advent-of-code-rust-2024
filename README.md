@@ -19,6 +19,20 @@ Solutions for [Advent of Code](https://adventofcode.com/) in [Rust](https://www.
 <!--- advent_readme_stars table --->
 
 <!--- benchmarking table --->
+## Benchmarks
+
+| Day | Part 1 | Part 2 |
+| :---: | :---: | :---:  |
+| [Day 1](./src/bin/01.rs) | `81.5µs` | `83.5µs` |
+| [Day 2](./src/bin/02.rs) | `285.7µs` | `385.0µs` |
+| [Day 3](./src/bin/03.rs) | `77.1µs` | `74.0µs` |
+| [Day 4](./src/bin/04.rs) | `1.2ms` | `1.2ms` |
+| [Day 5](./src/bin/05.rs) | `1.7ms` | `1.7ms` |
+| [Day 6](./src/bin/06.rs) | `928.8µs` | `589.2ms` |
+| [Day 7](./src/bin/07.rs) | `1.2ms` | `34.2ms` |
+
+**Total: 632.32ms**
+<!--- benchmarking table --->
 
 ---
 
@@ -301,6 +315,10 @@ Do you have aoc-specific crate recommendations? [Share them!](https://github.com
 ## Common pitfalls
 
 -   **Integer overflows:** This template uses 32-bit integers by default because it is generally faster - for example when packed in large arrays or structs - than using 64-bit integers everywhere. For some problems, solutions for real input might exceed 32-bit integer space. While this is checked and panics in `debug` mode, integers [wrap](https://doc.rust-lang.org/book/ch03-02-data-types.html#integer-overflow) in `release` mode, leading to wrong output when running your solution.
+
+## Hidden tooltips
+
+`<span title=` in html code.
 
 ## Footnotes
 
