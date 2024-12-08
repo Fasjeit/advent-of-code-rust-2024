@@ -89,7 +89,9 @@ pub fn part_two_st(input: &str) -> Option<u32> {
     let mut iter_counter = 1;
 
     for (index, change_cell) in possible_block_locations {
-        println!("Solving [{} / {}]", iter_counter, total - 1); // -1 for starting pos
+        if cfg!(debug_assertions) {
+            println!("Solving [{} / {}]", iter_counter, total - 1); // -1 for starting pos
+        }
         iter_counter += 1;
 
         // create new state set for collision detection
@@ -195,7 +197,9 @@ pub fn part_two_mt(input: &str) -> Option<u32> {
                 *iter += 1; // Increment the shared counter
             }
 
-            println!("Solving [{} / {}]", local_iter_counter, total - 1); // -1 for starting pos
+            if cfg!(debug_assertions) {
+                println!("Solving [{} / {}]", local_iter_counter, total - 1); // -1 for starting pos
+            }
 
             // create new state set for collision detection
             let mut guard_state_set: HashSet<(Index, Direction)> = HashSet::new();
