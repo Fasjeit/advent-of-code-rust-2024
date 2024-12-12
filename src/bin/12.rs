@@ -48,32 +48,32 @@ pub fn part_two(input: &str) -> Option<u32> {
 
     //matrix.print();
 
-    let test_i = 0;
-    let index = matrix.get_index_from_position(test_i);
-    let parent = test_i;
-    let mut acc_area = 0;
-    let acc_perimeter = traverse_part2(&mut matrix, index, parent, &mut acc_area, FromDirection::None);
+    // let test_i = 0;
+    // let index = matrix.get_index_from_position(test_i);
+    // let parent = test_i;
+    // let mut acc_area = 0;
+    // let acc_perimeter = traverse_part2(&mut matrix, index, parent, &mut acc_area, FromDirection::None);
 
-    matrix.print();
-    dbg!(&acc_area);
-    dbg!(&acc_perimeter);
+    // matrix.print();
+    // dbg!(&acc_area);
+    // dbg!(&acc_perimeter);
 
 
-    // let mut total_price = 0;
-    // for i in 0..matrix.data.len()
-    // {
-    //     let index = matrix.get_index_from_position(i);
-    //     let parent = i;
+    let mut total_price = 0;
+    for i in 0..matrix.data.len()
+    {
+        let index = matrix.get_index_from_position(i);
+        let parent = i;
 
-    //     let mut area = 0;
-    //     let perimeter = traverse_part2(&mut matrix, index, parent, &mut area, FromDirection::None);
+        let mut area = 0;
+        let perimeter = traverse_part2(&mut matrix, index, parent, &mut area, FromDirection::None);
 
-    //     total_price += area * perimeter;
-    // }
+        total_price += area * perimeter;
+    }
 
-    // Some(total_price)
+    Some(total_price)
 
-    todo!()
+    //todo!()
 }
 
 fn traverse(matrix: &mut Matrix<MapCell>, index:Index, parent:usize, acc_area:&mut u32) -> u32
@@ -226,6 +226,11 @@ fn traverse_part2(matrix: &mut Matrix<MapCell>, index:Index, parent:usize, acc_a
 
     matrix[index.y][index.x].visited = true;
 
+    let mut has_up = true;
+    let mut has_down = true;
+    let mut has_left = true;
+    let mut has_right = true;
+
     // Up
     if index.y > 0 && matrix[index.y - 1][index.x].garden_type == current.garden_type {
         let rec_result = traverse_part2(
@@ -240,16 +245,11 @@ fn traverse_part2(matrix: &mut Matrix<MapCell>, index:Index, parent:usize, acc_a
         );
         cell_perimeter -=1;
         cell_perimeter += rec_result;
-    }
-    else if should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Right, FromDirection::Up))
-         || should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Left, FromDirection::Up))
-    {
-        // continue horizontal side
-        // exists left and upper-left
-        // or right and upper-right
 
-        cell_perimeter -=1;
-        dbg!("continue horizontal up");
+        println!("{:#?} has up", &index);
+    }
+    else {
+        has_up = false;
     }
 
     // Down
@@ -266,13 +266,11 @@ fn traverse_part2(matrix: &mut Matrix<MapCell>, index:Index, parent:usize, acc_a
         );
         cell_perimeter -=1;
         cell_perimeter += rec_result;
+
+        println!("{:#?} has down", &index);
     }
-    else if should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Right, FromDirection::Down))
-         || should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Left, FromDirection::Down))
-   {
-        // continue horizontal side
-        cell_perimeter -=1;
-        dbg!("continue horizontal down");
+    else {
+        has_down = false;
     }
 
     // Right
@@ -289,13 +287,12 @@ fn traverse_part2(matrix: &mut Matrix<MapCell>, index:Index, parent:usize, acc_a
         );
         cell_perimeter -=1;
         cell_perimeter += rec_result;
+
+        println!("{:#?} has right", &index);
     }
-    else if should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Up, FromDirection::Right))
-         || should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Down, FromDirection::Right))
+    else
     {
-        // continue vertical side
-        cell_perimeter -=1;
-        dbg!("continue vertical right");
+        has_right = false;
     }
 
     // Left
@@ -312,16 +309,66 @@ fn traverse_part2(matrix: &mut Matrix<MapCell>, index:Index, parent:usize, acc_a
         );
         cell_perimeter -=1;
         cell_perimeter += rec_result;
+
+        println!("{:#?} has left", &index);
     }
-    else if should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Up, FromDirection::Left))
+    else
+    {
+        has_left = false;
+    }
+
+
+    // All checks to remove bounds only after recursion calls
+    // to use filled bounds_created for all neighbors.
+
+    if !has_up
+    {
+        if should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Right, FromDirection::Up))
+         || should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Left, FromDirection::Up))
+        {
+            // continue horizontal side
+            // exists left and upper-left
+            // or right and upper-right
+
+            cell_perimeter -=1;
+            println!("{:#?} continue horizontal up", &index);
+        }
+    }
+
+    if !has_down
+    {
+        if should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Right, FromDirection::Down))
+         || should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Left, FromDirection::Down))
+        {
+                // continue horizontal side
+                cell_perimeter -=1;
+                println!("{:#?} continue horizontal down", &index);
+            }
+    }
+
+    if !has_right
+    {
+        if should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Up, FromDirection::Right))
+         || should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Down, FromDirection::Right))
+    {
+        // continue vertical side
+        cell_perimeter -=1;
+        println!("{:#?} continue vertical right", &index);
+    }
+    }
+
+    if !has_left
+    {
+        if should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Up, FromDirection::Left))
          || should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Down, FromDirection::Left))
     {
         // continue vertical side
         cell_perimeter -=1;
-        dbg!("continue vertical left");
+        println!("{:#?} continue vertical left", &index);
+    }
     }
 
-    dbg!(cell_perimeter);
+    println!("{:#?} edges:  {}", &index, cell_perimeter);
 
     matrix[index.y][index.x].bounds_created = true;
     cell_perimeter
