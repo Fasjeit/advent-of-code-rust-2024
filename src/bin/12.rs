@@ -1,38 +1,38 @@
-use std::clone;
-use std::collections::HashSet;
 use std::fmt::Debug;
-use std::process::id;
 use std::str::FromStr;
 
 advent_of_code::solution!(12);
 
 pub fn part_one(input: &str) -> Option<u32> {
     let (data, size) = parse_row_input_as_data_array::<char>(input);
-    let data_cells: Vec<MapCell> = data.into_iter().enumerate().map(|(i,t)|  MapCell::new(i, t)).collect();
+    let data_cells: Vec<MapCell> = data
+        .into_iter()
+        .enumerate()
+        .map(|(i, t)| MapCell::new(i, t))
+        .collect();
 
-    let mut matrix = Matrix{ data:data_cells.clone(), size };
+    let mut matrix = Matrix {
+        data: data_cells.clone(),
+        size,
+    };
 
     //matrix.print();
 
     // let test_i = 7;
     // let index = matrix.get_index_from_position(test_i);
-    // let parent = test_i;
     // let mut acc_area = 0;
-    // let acc_perimeter = traverse(&mut matrix, index, parent, &mut acc_area);
+    // let acc_perimeter = traverse(&mut matrix, index, &mut acc_area);
 
     // matrix.print();
     // dbg!(&acc_area);
     // dbg!(&acc_perimeter);
 
-
     let mut total_price = 0;
-    for i in 0..matrix.data.len()
-    {
+    for i in 0..matrix.data.len() {
         let index = matrix.get_index_from_position(i);
-        let parent = i;
 
         let mut area = 0;
-        let perimeter = traverse(&mut matrix, index, parent, &mut area);
+        let perimeter = traverse(&mut matrix, index, &mut area);
 
         total_price += area * perimeter;
     }
@@ -42,50 +42,51 @@ pub fn part_one(input: &str) -> Option<u32> {
 
 pub fn part_two(input: &str) -> Option<u32> {
     let (data, size) = parse_row_input_as_data_array::<char>(input);
-    let data_cells: Vec<MapCell> = data.into_iter().enumerate().map(|(i,t)|  MapCell::new(i, t)).collect();
+    let data_cells: Vec<MapCell> = data
+        .into_iter()
+        .enumerate()
+        .map(|(i, t)| MapCell::new(i, t))
+        .collect();
 
-    let mut matrix = Matrix{ data:data_cells.clone(), size };
+    let mut matrix = Matrix {
+        data: data_cells.clone(),
+        size,
+    };
 
-    //matrix.print();
+    // matrix.print();
 
-    // let test_i = 0;
+    // let test_i = 15;
     // let index = matrix.get_index_from_position(test_i);
-    // let parent = test_i;
     // let mut acc_area = 0;
-    // let acc_perimeter = traverse_part2(&mut matrix, index, parent, &mut acc_area, FromDirection::None);
+    // let acc_sides = traverse_part2(&mut matrix, index, &mut acc_area);
 
     // matrix.print();
     // dbg!(&acc_area);
-    // dbg!(&acc_perimeter);
+    // dbg!(&acc_sides);
 
+    // todo!()
 
     let mut total_price = 0;
-    for i in 0..matrix.data.len()
-    {
+    for i in 0..matrix.data.len() {
         let index = matrix.get_index_from_position(i);
-        let parent = i;
 
         let mut area = 0;
-        let perimeter = traverse_part2(&mut matrix, index, parent, &mut area, FromDirection::None);
+        let perimeter = traverse_part2(&mut matrix, index, &mut area);
 
         total_price += area * perimeter;
     }
 
     Some(total_price)
-
-    //todo!()
 }
 
-fn traverse(matrix: &mut Matrix<MapCell>, index:Index, parent:usize, acc_area:&mut u32) -> u32
-{
+fn traverse(matrix: &mut Matrix<MapCell>, index: Index, acc_area: &mut u32) -> u32 {
     // let parent = match parent {
     //     Some(p) => p,
     //     None => index,
     // };
 
     let current = &matrix[index.y][index.x].clone();
-    if current.visited
-    {
+    if current.visited {
         return 0;
     }
 
@@ -105,38 +106,39 @@ fn traverse(matrix: &mut Matrix<MapCell>, index:Index, parent:usize, acc_area:&m
                 x: index.x,
                 y: index.y - 1,
             },
-            parent,
             acc_area,
         );
-        cell_perimeter -=1;
+        cell_perimeter -= 1;
         cell_perimeter += rec_result;
     }
     // Down
-    if index.y < matrix.size.y - 1 && matrix[index.y + 1][index.x].garden_type == current.garden_type {
+    if index.y < matrix.size.y - 1
+        && matrix[index.y + 1][index.x].garden_type == current.garden_type
+    {
         let rec_result = traverse(
             matrix,
             Index {
                 x: index.x,
                 y: index.y + 1,
             },
-            parent,
             acc_area,
         );
-        cell_perimeter -=1;
+        cell_perimeter -= 1;
         cell_perimeter += rec_result;
     }
     // Right
-    if index.x < matrix.size.x - 1 && matrix[index.y][index.x + 1].garden_type == current.garden_type {
+    if index.x < matrix.size.x - 1
+        && matrix[index.y][index.x + 1].garden_type == current.garden_type
+    {
         let rec_result = traverse(
             matrix,
             Index {
                 x: index.x + 1,
                 y: index.y,
             },
-            parent,
             acc_area,
         );
-        cell_perimeter -=1;
+        cell_perimeter -= 1;
         cell_perimeter += rec_result;
     }
     // Left
@@ -147,10 +149,9 @@ fn traverse(matrix: &mut Matrix<MapCell>, index:Index, parent:usize, acc_area:&m
                 x: index.x - 1,
                 y: index.y,
             },
-            parent,
             acc_area,
         );
-        cell_perimeter -=1;
+        cell_perimeter -= 1;
         cell_perimeter += rec_result;
     }
 
@@ -158,78 +159,92 @@ fn traverse(matrix: &mut Matrix<MapCell>, index:Index, parent:usize, acc_area:&m
 }
 
 #[derive(PartialEq, Copy, Clone)]
-enum FromDirection {
+enum Direction {
     Up,
     Down,
     Left,
     Right,
-    None
 }
 
-fn should_not_exists_check(matrix :&Matrix<MapCell>, index: Index, garden_type: char, directions: (FromDirection, FromDirection)) -> bool
-{
-    // sample for UP
+fn have_corner(
+    matrix: &Matrix<MapCell>,
+    index: Index,
+    garden_type: char,
+    directions: (Direction, Direction),
+) -> u32 {
+    // https://www.reddit.com/r/adventofcode/comments/1hcdnk0/comment/m1nkmol
+    // Help from reddit - the number of sides = number of corners.
+    // For each plot, check the neighbors in each pair of orthoganal
+    // directions. If neither match the source plot
+    //
+    // Outer corner:
+    // ...
+    // ##.
+    // ##.
+    //
+    // If both match the source plot and the corner plot doesn't match
+    // Inner corner:
+    //
+    // ##.
+    // ###
+    // ###
 
-    // +-+ +-+
-    //  T| |K
-    // +-+-+-+
-    //  X A Y
-    // +-+-+-+
-    // upper A bound non-exists for empty UP
-    // IF
-    // Y exists and K non-exists
-    // AND
-    // X exists and T non-exists
+    // Outer - up and right are not in same set
+    // inner - up and right are in the same set, but upper-right - don't.
 
-    // need to add have bounds_created check to make initial bounds exists
+    // core is written with var names as up-right param.
+    // but will work for other directions too.
 
-    let mut should_not_exists = false;
-    if let Some(ri) = index.to_direction(matrix, directions.0)
-    {
-        if matrix[ri.y][ri.x].garden_type == garden_type && matrix[ri.y][ri.x].bounds_created
+    let up = index.navigate_to(matrix, directions.0);
+    let right = index.navigate_to(matrix, directions.1);
+
+    let outer_corner = match (up, right) {
+        (None, None) => true, // Edge of the map.
+        (Some(u), Some(r)) // both exists
+            if matrix[u.y][u.x].garden_type != garden_type
+                && matrix[r.y][r.x].garden_type != garden_type =>
         {
-            if let Some(rui) = ri.to_direction(matrix, directions.1)
-            {
-                if matrix[rui.y][rui.x].garden_type != garden_type
-                {
-                    should_not_exists = true;
-                }
-            }
-            else {
-                should_not_exists = true;
-            }
+            true // but not the type
+        }
+        (Some(u), None) if matrix[u.y][u.x].garden_type != garden_type => true, // only one exits, the other - not the same type
+        (None, Some(r)) if matrix[r.y][r.x].garden_type != garden_type => true, // only one exits, the other - not the same type
+        _ => false, // Any other case
+    };
+
+    if outer_corner {
+        return 1;
+    }
+
+    // Check inner corner
+    if matches!(up, Some(u) if matrix[u.y][u.x].garden_type == garden_type)
+        && matches!(right, Some(r) if matrix[r.y][r.x].garden_type == garden_type)
+    {
+        // As both up and right exists -> upper-right exists too!
+        let upper_right = up.unwrap().navigate_to(matrix, directions.1).unwrap();
+        if matrix[upper_right.y][upper_right.x].garden_type != garden_type {
+            // Both have the same garden type and diagonal one have the other.
+            // -> inner corner
+            return 1;
         }
     }
-    should_not_exists
+
+    0
 }
 
-fn traverse_part2(matrix: &mut Matrix<MapCell>, index:Index, parent:usize, acc_area:&mut u32, from_direction: FromDirection) -> u32
-{
-    // let parent = match parent {
-    //     Some(p) => p,
-    //     None => index,
-    // };
+fn traverse_part2(matrix: &mut Matrix<MapCell>, index: Index, acc_area: &mut u32) -> u32 {
+    // Same as part 1, but also counting corners
+    // not perimeter.
 
     let current = &matrix[index.y][index.x].clone();
-    if current.visited
-    {
+    if current.visited {
         return 0;
     }
 
-    dbg!(&index);
-
-    // perimeter for the current cell + all next traversed cells from the current one.
-    // max for cell only is 4. We will subtract 1 for each neighbour cell.
-    let mut cell_perimeter = 4;
+    let mut corners = 0;
 
     *acc_area += 1;
 
     matrix[index.y][index.x].visited = true;
-
-    let mut has_up = true;
-    let mut has_down = true;
-    let mut has_left = true;
-    let mut has_right = true;
 
     // Up
     if index.y > 0 && matrix[index.y - 1][index.x].garden_type == current.garden_type {
@@ -239,62 +254,38 @@ fn traverse_part2(matrix: &mut Matrix<MapCell>, index:Index, parent:usize, acc_a
                 x: index.x,
                 y: index.y - 1,
             },
-            parent,
             acc_area,
-            FromDirection::Up
         );
-        cell_perimeter -=1;
-        cell_perimeter += rec_result;
-
-        println!("{:#?} has up", &index);
+        corners += rec_result;
     }
-    else {
-        has_up = false;
-    }
-
     // Down
-    if index.y < matrix.size.y - 1 && matrix[index.y + 1][index.x].garden_type == current.garden_type {
+    if index.y < matrix.size.y - 1
+        && matrix[index.y + 1][index.x].garden_type == current.garden_type
+    {
         let rec_result = traverse_part2(
             matrix,
             Index {
                 x: index.x,
                 y: index.y + 1,
             },
-            parent,
             acc_area,
-            FromDirection::Down
         );
-        cell_perimeter -=1;
-        cell_perimeter += rec_result;
-
-        println!("{:#?} has down", &index);
+        corners += rec_result;
     }
-    else {
-        has_down = false;
-    }
-
     // Right
-    if index.x < matrix.size.x - 1 && matrix[index.y][index.x + 1].garden_type == current.garden_type {
+    if index.x < matrix.size.x - 1
+        && matrix[index.y][index.x + 1].garden_type == current.garden_type
+    {
         let rec_result = traverse_part2(
             matrix,
             Index {
                 x: index.x + 1,
                 y: index.y,
             },
-            parent,
             acc_area,
-            FromDirection::Right
         );
-        cell_perimeter -=1;
-        cell_perimeter += rec_result;
-
-        println!("{:#?} has right", &index);
+        corners += rec_result;
     }
-    else
-    {
-        has_right = false;
-    }
-
     // Left
     if index.x > 0 && matrix[index.y][index.x - 1].garden_type == current.garden_type {
         let rec_result = traverse_part2(
@@ -303,90 +294,54 @@ fn traverse_part2(matrix: &mut Matrix<MapCell>, index:Index, parent:usize, acc_a
                 x: index.x - 1,
                 y: index.y,
             },
-            parent,
             acc_area,
-            FromDirection::Left
         );
-        cell_perimeter -=1;
-        cell_perimeter += rec_result;
-
-        println!("{:#?} has left", &index);
-    }
-    else
-    {
-        has_left = false;
+        corners += rec_result;
     }
 
+    // Now counting corners
+    corners += have_corner(
+        matrix,
+        index,
+        current.garden_type,
+        (Direction::Up, Direction::Right),
+    );
 
-    // All checks to remove bounds only after recursion calls
-    // to use filled bounds_created for all neighbors.
+    corners += have_corner(
+        matrix,
+        index,
+        current.garden_type,
+        (Direction::Up, Direction::Left),
+    );
 
-    if !has_up
-    {
-        if should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Right, FromDirection::Up))
-         || should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Left, FromDirection::Up))
-        {
-            // continue horizontal side
-            // exists left and upper-left
-            // or right and upper-right
+    corners += have_corner(
+        matrix,
+        index,
+        current.garden_type,
+        (Direction::Down, Direction::Right),
+    );
 
-            cell_perimeter -=1;
-            println!("{:#?} continue horizontal up", &index);
-        }
-    }
+    corners += have_corner(
+        matrix,
+        index,
+        current.garden_type,
+        (Direction::Down, Direction::Left),
+    );
 
-    if !has_down
-    {
-        if should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Right, FromDirection::Down))
-         || should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Left, FromDirection::Down))
-        {
-                // continue horizontal side
-                cell_perimeter -=1;
-                println!("{:#?} continue horizontal down", &index);
-            }
-    }
-
-    if !has_right
-    {
-        if should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Up, FromDirection::Right))
-         || should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Down, FromDirection::Right))
-    {
-        // continue vertical side
-        cell_perimeter -=1;
-        println!("{:#?} continue vertical right", &index);
-    }
-    }
-
-    if !has_left
-    {
-        if should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Up, FromDirection::Left))
-         || should_not_exists_check(&matrix, index, current.garden_type, (FromDirection::Down, FromDirection::Left))
-    {
-        // continue vertical side
-        cell_perimeter -=1;
-        println!("{:#?} continue vertical left", &index);
-    }
-    }
-
-    println!("{:#?} edges:  {}", &index, cell_perimeter);
-
-    matrix[index.y][index.x].bounds_created = true;
-    cell_perimeter
+    corners
 }
 
 #[derive(Debug, Clone)]
 struct MapCell {
     garden_type: char,
     visited: bool,
-    bounds_created: bool,
 }
 
 impl MapCell {
-    fn new(id: usize, garden_type: char) -> Self {
+    fn new(_id: usize, garden_type: char) -> Self {
         MapCell {
             garden_type,
             visited: false,
-            bounds_created: false
         }
     }
 }
@@ -403,54 +358,55 @@ struct Index {
     y: usize,
 }
 
-impl Index{
-    fn up<T>(&self, _matrix: &Matrix<T>) -> Option<Index>
-    {
-        if self.y == 0
-        {
+impl Index {
+    fn up<T>(&self, _matrix: &Matrix<T>) -> Option<Index> {
+        if self.y == 0 {
             return None;
         }
-        return Some(Index { x:self.x, y:self.y-1});
+        Some(Index {
+            x: self.x,
+            y: self.y - 1,
+        })
     }
 
-    fn left<T>(&self, _matrix: &Matrix<T>) -> Option<Index>
-    {
-        if self.x == 0
-        {
+    fn left<T>(&self, _matrix: &Matrix<T>) -> Option<Index> {
+        if self.x == 0 {
             return None;
         }
-        return Some(Index { x:self.x-1, y:self.y});
+        Some(Index {
+            x: self.x - 1,
+            y: self.y,
+        })
     }
 
-    fn down<T>(&self, matrix: &Matrix<T>) -> Option<Index>
-    {
-        if self.y == matrix.size.y-1
-        {
+    fn down<T>(&self, matrix: &Matrix<T>) -> Option<Index> {
+        if self.y == matrix.size.y - 1 {
             return None;
         }
-        return Some(Index { x:self.x, y:self.y+1});
+        Some(Index {
+            x: self.x,
+            y: self.y + 1,
+        })
     }
 
-    fn right<T>(&self, matrix: &Matrix<T>) -> Option<Index>
-    {
-        if self.x == matrix.size.x-1
-        {
+    fn right<T>(&self, matrix: &Matrix<T>) -> Option<Index> {
+        if self.x == matrix.size.x - 1 {
             return None;
         }
-        return Some(Index { x:self.x+1, y:self.y});
+        Some(Index {
+            x: self.x + 1,
+            y: self.y,
+        })
     }
 
-    fn to_direction<T>(&self, matrix: &Matrix<T>, direction: FromDirection) -> Option<Index>
-    {
+    fn navigate_to<T>(&self, matrix: &Matrix<T>, direction: Direction) -> Option<Index> {
         match direction {
-            FromDirection::Up => self.up(matrix),
-            FromDirection::Down =>self.down(matrix),
-            FromDirection::Left => self.left(matrix),
-            FromDirection::Right => self.right(matrix),
-            FromDirection::None => None,
+            Direction::Up => self.up(matrix),
+            Direction::Down => self.down(matrix),
+            Direction::Left => self.left(matrix),
+            Direction::Right => self.right(matrix),
         }
     }
-
 }
 
 #[derive(Debug, Clone)]
@@ -529,49 +485,65 @@ mod tests {
 
     #[test]
     fn test_part_one_1() {
-        let result = part_one(&advent_of_code::template::read_file_part("examples", DAY,1));
+        let result = part_one(&advent_of_code::template::read_file_part(
+            "examples", DAY, 1,
+        ));
         assert_eq!(result, Some(140));
     }
 
     #[test]
     fn test_part_one_2() {
-        let result = part_one(&advent_of_code::template::read_file_part("examples", DAY,2));
+        let result = part_one(&advent_of_code::template::read_file_part(
+            "examples", DAY, 2,
+        ));
         assert_eq!(result, Some(772));
     }
 
     #[test]
     fn test_part_one_3() {
-        let result = part_one(&advent_of_code::template::read_file_part("examples", DAY,3));
+        let result = part_one(&advent_of_code::template::read_file_part(
+            "examples", DAY, 3,
+        ));
         assert_eq!(result, Some(1930));
     }
 
     #[test]
     fn test_part_two_1() {
-        let result = part_two(&advent_of_code::template::read_file_part("examples", DAY,1));
+        let result = part_two(&advent_of_code::template::read_file_part(
+            "examples", DAY, 1,
+        ));
         assert_eq!(result, Some(80));
     }
 
     #[test]
     fn test_part_two_2() {
-        let result = part_two(&advent_of_code::template::read_file_part("examples", DAY,2));
+        let result = part_two(&advent_of_code::template::read_file_part(
+            "examples", DAY, 2,
+        ));
         assert_eq!(result, Some(436));
     }
 
     #[test]
     fn test_part_two_3() {
-        let result = part_two(&advent_of_code::template::read_file_part("examples", DAY,3));
+        let result = part_two(&advent_of_code::template::read_file_part(
+            "examples", DAY, 3,
+        ));
         assert_eq!(result, Some(1206));
     }
 
     #[test]
     fn test_part_two_4() {
-        let result = part_two(&advent_of_code::template::read_file_part("examples", DAY,4));
+        let result = part_two(&advent_of_code::template::read_file_part(
+            "examples", DAY, 4,
+        ));
         assert_eq!(result, Some(236));
     }
 
     #[test]
     fn test_part_two_5() {
-        let result = part_two(&advent_of_code::template::read_file_part("examples", DAY,5));
+        let result = part_two(&advent_of_code::template::read_file_part(
+            "examples", DAY, 5,
+        ));
         assert_eq!(result, Some(368));
     }
 }
