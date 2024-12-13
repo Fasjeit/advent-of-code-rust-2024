@@ -49,7 +49,7 @@ pub fn part_two_blinks(input: &str, blinks: u32) -> Option<u128> {
     }
 
     let result = count.values().sum();
-
+    
     Some(result)
 }
 
