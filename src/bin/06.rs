@@ -323,7 +323,7 @@ impl Matrix<MapCell> {
     #[allow(dead_code)]
     fn print(&self) {
         for y in 0..self.size.y {
-            for x in 0..self.size.y {
+            for x in 0..self.size.x {
                 let mut ch = '.';
                 if self[y][x].have_added_obstacle {
                     ch = 'O';

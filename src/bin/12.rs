@@ -427,7 +427,7 @@ impl Matrix<MapCell> {
     #[allow(dead_code)]
     fn print(&self) {
         for y in 0..self.size.y {
-            for x in 0..self.size.y {
+            for x in 0..self.size.x {
                 let mut ch = self[y][x].garden_type.to_string();
                 if self[y][x].visited {
                     ch = ch.to_ascii_lowercase();
