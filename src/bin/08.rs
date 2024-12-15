@@ -198,8 +198,8 @@ struct Matrix<T> {
 
 impl<T> Matrix<T> {
     fn get_index_from_position(&self, indx: usize) -> Index {
-        let y = indx / self.size.y;
-        let x = indx - y * self.size.y;
+        let y = indx / self.size.x;
+        let x = indx - y * self.size.x;
         Index { x, y }
     }
 }
