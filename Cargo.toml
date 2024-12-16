@@ -30,3 +30,5 @@ tinyjson = "2.5.1"
 # Solution dependencies
 itertools = "0.13.0"
 # petgraph = "0.6.5"
+strum = "0.26"
+strum_macros = "0.26"

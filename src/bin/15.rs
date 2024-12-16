@@ -256,6 +256,8 @@ fn move_box_rec(
     command: Direction,
     should_move: bool,
 ) -> bool {
+    // if is should_move = false: check if movement possible.
+    // if should_move = true: just move without checks.
     if command == Direction::Left || command == Direction::Right {
         todo!()
     }
