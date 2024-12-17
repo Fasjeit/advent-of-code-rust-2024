@@ -13,7 +13,7 @@ pub fn part_one(input: &str) -> Option<String> {
 
     let mut results: Vec<u64> = Vec::new();
     loop {
-        match machine.Execute() {
+        match machine.execute() {
             ExecuteResult::None => (),
             ExecuteResult::Halt => break,
             ExecuteResult::Value(v) => results.push(v),
@@ -26,8 +26,8 @@ pub fn part_one(input: &str) -> Option<String> {
         .collect::<Vec<_>>()
         .join(",");
 
-    machine.print();
-    println!("{}", &result);
+    //machine.print();
+    //println!("{}", &result);
 
     Some(result)
 }
@@ -47,39 +47,55 @@ pub fn part_two(input: &str) -> Option<u64> {
 
     let mut machine = parse_machine_data(machine_data, commands_data);
 
-    let mut reg_a_candidate: Vec<u8> = vec![0; machine.memory.len()];
+    let mut reg_a_candidate = 0_u64;
+    let mut matched_from_end_index = 0;
+    loop {
+        reg_a_candidate += 1;
 
-    for pos in 0..reg_a_candidate.len() - 1 {
-        for position_candidate in 0..u8::MAX {
-            reg_a_candidate[pos] = position_candidate;
+        // run the machine
+        machine.instruction_pointer = 0;
+        machine.register_a = reg_a_candidate;
 
-            // run the machine
-            machine.instruction_pointer = 0;
-            machine.register_a = vec_to_u64(&reg_a_candidate);
-            let mut results: Vec<u64> = Vec::new();
-            loop {
-                match machine.Execute() {
-                    ExecuteResult::None => (),
-                    ExecuteResult::Halt => break,
-                    ExecuteResult::Value(v) => results.push(v),
-                };
-            }
+        let mut results: Vec<u64> = Vec::new();
+        loop {
+            match machine.execute() {
+                ExecuteResult::None => (),
+                ExecuteResult::Halt => break,
+                ExecuteResult::Value(v) => results.push(v),
+            };
+        }
 
-            if results.len() - 1 < pos {
-                continue;
-            }
+        if results.len() - 1 < matched_from_end_index {
+            continue;
+        }
 
-            if results[results.len() - 1 - pos] == machine.memory[machine.memory.len() - 1 - pos] {
-                // dbg!(&reg_a_candidate);
-                // dbg!(&results[pos]);
-                // dbg!(&machine.memory[pos]);
+        // thanks to https://www.reddit.com/r/adventofcode/comments/1hg38ah/comment/m2hs1x3/
+        // I was checking only the last digit first.
+        // also thanks for idea just to use int and multiply by 8
+        // instead of using arrays with to_int conversion.
+
+        // Need to check all last digits match! not only the current one!
+        let last_digits_equal = machine.memory[machine.memory.len() - results.len()..]
+            .iter()
+            .enumerate()
+            .all(|(i, v)| results[i] == *v);
+
+        if last_digits_equal {
+            //dbg!(&reg_a_candidate);
+            //dbg!(&machine.memory);
+            //dbg!(&results);
+
+            if results.len() == machine.memory.len() {
                 break;
             }
+            reg_a_candidate = reg_a_candidate * 8 - 1; // -1 to adjust value as +1 is tn the beginning of the loop
+            matched_from_end_index += 1;
+            continue;
         }
     }
 
     //dbg!(reg_a_candidate);
-    let result = vec_to_u64(&reg_a_candidate) * 8; // do not included first div before
+    let result = reg_a_candidate;
     Some(result)
 }
 
@@ -112,7 +128,7 @@ pub fn part_two_slow(input: &str) -> Option<u64> {
 
         let mut results: Vec<u64> = Vec::new();
         loop {
-            match machine.Execute() {
+            match machine.execute() {
                 ExecuteResult::None => (),
                 ExecuteResult::Halt => break,
                 ExecuteResult::Value(v) => results.push(v),
@@ -134,15 +150,7 @@ pub fn part_two_slow(input: &str) -> Option<u64> {
         reg_a_candidate += 1;
     }
 
-    Some(reg_a_candidate as u64)
-}
-
-fn vec_to_u64(data: &Vec<u8>) -> u64 {
-    let mut result = 0;
-    for i in (0..data.len()).rev() {
-        result += 8_u64.pow((data.len() - 1 - i) as u32) * data[i] as u64;
-    }
-    result
+    Some(reg_a_candidate)
 }
 
 enum Instruction {
@@ -160,9 +168,9 @@ impl From<(u64, u64)> for Instruction {
     fn from(value: (u64, u64)) -> Self {
         match value.0 {
             0 => Self::Adv(ComboOperand::from(value.1)),
-            1 => Self::Bxl(LiteralOperand { value: value.1 }),
+            1 => Self::Bxl(LiteralOperand::from(value.1)),
             2 => Self::Bst(ComboOperand::from(value.1)),
-            3 => Self::Jnz(LiteralOperand { value: value.1 }),
+            3 => Self::Jnz(LiteralOperand::from(value.1)),
             4 => Self::Bxc(ComboOperand::from(value.1)),
             5 => Self::Out(ComboOperand::from(value.1)),
             6 => Self::Bdv(ComboOperand::from(value.1)),
@@ -188,8 +196,9 @@ struct Machine {
     instruction_pointer: usize,
 }
 
+#[allow(clippy::let_and_return)]
 impl Machine {
-    fn Execute(&mut self) -> ExecuteResult {
+    fn execute(&mut self) -> ExecuteResult {
         if self.memory.len() < self.instruction_pointer + 2 {
             return ExecuteResult::Halt;
         }
@@ -202,8 +211,8 @@ impl Machine {
         let result = match instruction {
             Instruction::Adv(combo_operand) => {
                 let numerator = self.register_a;
-                let denominator = combo_operand.get_value(&self);
-                let result = numerator / 2_u64.pow(denominator as u32) as u64;
+                let denominator = combo_operand.get_value(self);
+                let result = numerator / 2_u64.pow(denominator as u32);
 
                 self.register_a = result;
                 self.instruction_pointer += 2;
@@ -238,7 +247,7 @@ impl Machine {
                 }
                 ExecuteResult::None
             }
-            Instruction::Bxc(combo_operand) => {
+            Instruction::Bxc(_combo_operand) => {
                 let reg_b = self.register_b;
                 let reg_c = self.register_c;
                 let result = reg_b ^ reg_c;
@@ -248,7 +257,7 @@ impl Machine {
                 ExecuteResult::None
             }
             Instruction::Out(combo_operand) => {
-                let operand = combo_operand.get_value(&self);
+                let operand = combo_operand.get_value(self);
                 let value = operand % 8;
 
                 self.instruction_pointer += 2;
@@ -256,8 +265,8 @@ impl Machine {
             }
             Instruction::Bdv(combo_operand) => {
                 let numerator = self.register_a;
-                let denominator = combo_operand.get_value(&self);
-                let result = numerator / 2_u64.pow(denominator as u32) as u64;
+                let denominator = combo_operand.get_value(self);
+                let result = numerator / 2_u64.pow(denominator as u32);
 
                 self.register_b = result;
                 self.instruction_pointer += 2;
@@ -265,8 +274,8 @@ impl Machine {
             }
             Instruction::Cdv(combo_operand) => {
                 let numerator = self.register_a;
-                let denominator = combo_operand.get_value(&self);
-                let result = numerator / 2_u64.pow(denominator as u32) as u64;
+                let denominator = combo_operand.get_value(self);
+                let result = numerator / 2_u64.pow(denominator as u32);
 
                 self.register_c = result;
                 self.instruction_pointer += 2;
@@ -277,6 +286,7 @@ impl Machine {
         result
     }
 
+    #[allow(dead_code)]
     fn print(&self) {
         println!("Register A: {}", self.register_a);
         println!("Register B: {}", self.register_b);
@@ -289,6 +299,12 @@ impl Machine {
 
 struct LiteralOperand {
     value: u64,
+}
+
+impl From<u64> for LiteralOperand {
+    fn from(value: u64) -> Self {
+        LiteralOperand { value }
+    }
 }
 
 enum ComboOperand {
@@ -332,6 +348,7 @@ impl ComboOperand {
         }
     }
 
+    #[allow(dead_code)]
     fn set_reg_value(&self, value: u64, machine: &mut Machine) {
         match self {
             ComboOperand::RegA => machine.register_b = value,
@@ -342,6 +359,7 @@ impl ComboOperand {
     }
 }
 
+#[allow(clippy::let_and_return)]
 fn parse_machine_data(machine_data: &str, commands_data: &str) -> Machine {
     let mut iterator = machine_data.lines();
     let a_reg_value: u64 = iterator.next().expect("Error parsing data")[12..]
@@ -404,20 +422,5 @@ mod tests {
             "examples", DAY, 2,
         ));
         assert_eq!(result, Some(117440));
-    }
-
-    #[test]
-    fn test_vec_to_u64() {
-        let result = vec_to_u64(&vec![1]);
-        assert_eq!(result, 1);
-
-        let result = vec_to_u64(&vec![4]);
-        assert_eq!(result, 4);
-
-        let result = vec_to_u64(&vec![1, 1]);
-        assert_eq!(result, 9);
-
-        let result = vec_to_u64(&vec![2, 3]);
-        assert_eq!(result, 19);
     }
 }
