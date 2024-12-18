@@ -40,7 +40,7 @@ pub fn part_one(input: &str) -> Option<u64> {
     //matrix.print();
 
     let result =
-        pseudo_dijkstra_step::<true>(&mut matrix, &end_position_matrix_index, &mut to_visit_set);
+        pseudo_dijkstra::<true>(&mut matrix, &end_position_matrix_index, &mut to_visit_set);
 
     Some(result)
 }
@@ -76,7 +76,7 @@ pub fn part_two(input: &str) -> Option<u64> {
     )));
 
     let result =
-        pseudo_dijkstra_step::<false>(&mut matrix, &end_position_matrix_index, &mut to_visit_set);
+        pseudo_dijkstra::<false>(&mut matrix, &end_position_matrix_index, &mut to_visit_set);
 
     if cfg!(debug_assertions) {
         matrix.print();
@@ -85,7 +85,7 @@ pub fn part_two(input: &str) -> Option<u64> {
     Some(result)
 }
 
-fn pseudo_dijkstra_step<const PART1: bool>(
+fn pseudo_dijkstra<const PART1: bool>(
     matrix: &mut Matrix<MapCell>,
     ending_position: &Index,
     to_visit_set: &mut BinaryHeap<Reverse<(u64, Index, Direction)>>,
@@ -100,52 +100,58 @@ fn pseudo_dijkstra_step<const PART1: bool>(
 
     let mut path_cost = u64::MAX;
 
-    while let Some(Reverse((cost, index, direction))) = to_visit_set.pop() {
+    while let Some(Reverse((current_cost, index, direction))) = to_visit_set.pop() {
         if safe_counter <= 0 {
             panic!("Safe counter stop.");
         }
         safe_counter -= 1;
 
         if matrix[index.y][index.x].cost[&direction] != u64::MAX {
-            assert!(matrix[index.y][index.x].cost[&direction] <= cost);
+            assert!(matrix[index.y][index.x].cost[&direction] <= current_cost);
             continue;
         }
 
         if let Some(val) = matrix[index.y][index.x].cost.get_mut(&direction) {
-            *val = cost;
+            *val = current_cost;
         } else {
             panic!("Cannot adjust the cost.")
         }
 
         if index == *ending_position {
             if PART1 {
-                return cost;
+                return current_cost;
             }
-
-            path_cost = path_cost.min(cost);
+            // do not stop at first optimal path for part 2.
+            path_cost = path_cost.min(current_cost);
             continue;
         }
 
-        if !PART1 && cost >= path_cost {
+        if !PART1 && current_cost >= path_cost {
+            // do not traverse further for part 2 if current cell cost
+            // is already more then optimal one to the end.
             continue;
         }
 
         let next_index = index.navigate_to(matrix, &direction).unwrap();
         if !matrix[next_index.y][next_index.x].has_wall()
-            && matrix[next_index.y][next_index.x].cost[&direction] >= (cost + 1)
+            && matrix[next_index.y][next_index.x].cost[&direction] >= (current_cost + 1)
         {
-            to_visit_set.push(Reverse((cost + 1, next_index, direction)));
+            to_visit_set.push(Reverse((current_cost + 1, next_index, direction)));
         }
 
         // just turn without traversing.
         let direction_to_the_right = direction.turn_right();
-        if matrix[index.y][index.x].cost[&direction_to_the_right] >= (cost + 1000) {
-            to_visit_set.push(Reverse((cost + 1000, index, direction_to_the_right)));
+        if matrix[index.y][index.x].cost[&direction_to_the_right] >= (current_cost + 1000) {
+            to_visit_set.push(Reverse((
+                current_cost + 1000,
+                index,
+                direction_to_the_right,
+            )));
         }
 
         let direction_to_the_left = direction.turn_left();
-        if matrix[index.y][index.x].cost[&direction_to_the_left] >= (cost + 1000) {
-            to_visit_set.push(Reverse((cost + 1000, index, direction_to_the_left)));
+        if matrix[index.y][index.x].cost[&direction_to_the_left] >= (current_cost + 1000) {
+            to_visit_set.push(Reverse((current_cost + 1000, index, direction_to_the_left)));
         }
     }
 
