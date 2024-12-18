@@ -85,31 +85,41 @@ fn solve_part_2(input: &str, size: Size, bytes_number_start: usize) -> Option<St
     let mut to_visit_set = BinaryHeap::new();
     to_visit_set.push(Reverse((0_u64, start_index)));
 
-    let mut next_byte_index = bytes_number_start;
+    // doing binary search!
+    let mut high: usize = bytes_fall.len();
+    let mut low = bytes_number_start;
+
     matrix.data.iter_mut().for_each(|c| c.cost = u64::MAX);
 
     //matrix.print();
     //println!();
 
-    #[allow(clippy::partialeq_to_none)]
-    while None != pseudo_dijkstra(&mut matrix, &end_index, &mut to_visit_set) {
-        let byte_pos = bytes_fall[next_byte_index];
-        matrix[byte_pos.y][byte_pos.x].has_byte = true;
-
-        next_byte_index += 1;
-
-        //matrix.print();
-        //println!();
-
+    while low < high {
+        let next_byte_index = (high + low) / 2;
         // reset matrix path info.
         matrix.data.iter_mut().for_each(|c| c.cost = u64::MAX);
         to_visit_set = BinaryHeap::new();
         to_visit_set.push(Reverse((0_u64, start_index)));
+
+        // Place bytes up to the `mid` index.
+        #[allow(clippy::needless_range_loop)]
+        for i in 0..=next_byte_index {
+            let byte_pos = bytes_fall[i];
+            matrix[byte_pos.y][byte_pos.x].has_byte = true;
+        }
+
+        let result = pseudo_dijkstra(&mut matrix, &end_index, &mut to_visit_set);
+        match result {
+            Some(_) => low = next_byte_index + 1, // have path => search right
+            None => high = next_byte_index,       // no path => search left
+        }
+        //matrix.print();
+        //println!();
     }
 
-    //dbg!(next_byte_index - 1);
-
-    let byte_pos = bytes_fall[next_byte_index - 1];
+    // need the first "bad" index, so +1
+    // as low is the last "good" one.
+    let byte_pos = bytes_fall[low + 1];
 
     Some(format!("{},{}", byte_pos.x, byte_pos.y))
 }

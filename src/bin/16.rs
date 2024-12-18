@@ -160,6 +160,10 @@ fn pseudo_dijkstra<const PART1: bool>(
         // at each iteration just trace back to the node with needed (inverse) direction
         // and cost-1 or -1000 depending on direction.
         // part 1 already computed all the costs for us.
+        //
+        // So if node A have cost a, and Node B have cost b
+        // when we backtrack from B (by popping it from the list) we check, whether is A-B edge cost exactly b-a.
+        // If yes - add node A to the backtrack list for next iteration.
 
         let mut backtrack = VecDeque::new();
         for direction in Direction::iter() {
