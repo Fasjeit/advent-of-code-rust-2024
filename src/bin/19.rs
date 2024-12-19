@@ -1,4 +1,4 @@
-use std::{cmp::Reverse, collections::HashMap, future::ready, result};
+use std::collections::HashMap;
 
 use itertools::Itertools;
 
@@ -24,7 +24,7 @@ pub fn part_one(input: &str) -> Option<u64> {
         }
     });
 
-    dbg!(result);
+    //dbg!(result);
 
     Some(result as u64)
 }
@@ -41,26 +41,27 @@ pub fn part_two(input: &str) -> Option<u64> {
     let patterns = parse_patterns(patterns_data);
     let targets = parse_targets(targets_data);
 
-    let result = targets.iter().enumerate().fold(0, |acc, (i, t)| {
-        println!("Solving {} of {}", i + 1, targets.len());
-        acc + count_target_possible(t, &patterns)
+    let mut visited: HashMap<String, u64> = HashMap::new();
+    let result = targets.iter().enumerate().fold(0, |acc, (_i, t)| {
+        //println!("Solving {} of {}", _i + 1, targets.len());
+        acc + count_target_possible(t, &patterns, &mut visited)
     });
 
     // let result = count_target_possible(&targets[4], &patterns);
 
-    dbg!(result);
+    //dbg!(result);
 
     Some(result as u64)
 }
 
 fn is_target_possible(target: &str, patterns: &HashMap<usize, Vec<String>>) -> bool {
-    if target.len() == 0 {
+    if target.is_empty() {
         return true;
     }
 
     // Go from bigger size patterns
     for pattern_size in patterns.keys().sorted().rev() {
-        for pattern in &patterns[&pattern_size] {
+        for pattern in &patterns[pattern_size] {
             if target.starts_with(pattern) {
                 let result = is_target_possible(&target[*pattern_size..], patterns);
                 if result {
@@ -70,27 +71,36 @@ fn is_target_possible(target: &str, patterns: &HashMap<usize, Vec<String>>) -> b
         }
     }
 
-    return false;
+    false
 }
 
-fn count_target_possible(target: &str, patterns: &HashMap<usize, Vec<String>>) -> u32 {
-    if target.len() == 0 {
+fn count_target_possible(
+    target: &str,
+    patterns: &HashMap<usize, Vec<String>>,
+    visited: &mut HashMap<String, u64>,
+) -> u64 {
+    if target.is_empty() {
         return 1;
+    }
+
+    if visited.contains_key(target) {
+        return visited[target];
     }
 
     let mut total_result = 0;
 
     // Go from bigger size patterns
     for pattern_size in patterns.keys().sorted().rev() {
-        for pattern in &patterns[&pattern_size] {
+        for pattern in &patterns[pattern_size] {
             if target.starts_with(pattern) {
-                let result = count_target_possible(&target[*pattern_size..], patterns);
+                let result = count_target_possible(&target[*pattern_size..], patterns, visited);
                 total_result += result;
             }
         }
     }
 
-    return total_result;
+    visited.entry(target.to_string()).or_insert(total_result);
+    total_result
 }
 
 fn parse_patterns(input: &str) -> HashMap<usize, Vec<String>> {
