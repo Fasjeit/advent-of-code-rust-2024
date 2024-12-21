@@ -63,6 +63,19 @@ fn get_count_many_robots(
     robot: u64,
     cache: &mut HashMap<String, Vec<u64>>,
 ) -> u64 {
+    // Get the 'input' sequence for the current layer.
+    // Split the input by 'A' to create an independent set of commands.
+    // For each split sequence, call the next layer (next robot) recursively to compute the command lengths.
+    // Accumulate the lengths returned from the recursive calls.
+    // Store the accumulated value in the cache for the current layer and the given 'input'.
+    //
+    // As different layers get different recursive costs (deeper the recursion, smaller the costs at current level)
+    // due to recursive accumulation, we need layered cache.
+    //
+    // Layered caching is necessary because each layer processes the same 'input' differently
+    // depending on the recursion depth (the current robot). Deeper layers handle smaller sub-problems,
+    // resulting in smaller costs at each level, so caching must account for both the 'input' and the layer (robot).
+
     let input_string: String = input.iter().collect();
 
     // Avoid holding a mutable reference to `cache` for too long
