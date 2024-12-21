@@ -1,24 +1,126 @@
-use std::cmp::Reverse;
-use std::collections::{BinaryHeap, HashMap};
-use std::f32::consts::E;
+use std::collections::HashMap;
 use std::fmt::Debug;
-use std::str::FromStr;
-use std::vec;
-use strum::IntoEnumIterator;
-use strum_macros::EnumIter;
 
 advent_of_code::solution!(21);
 
 pub fn part_one(input: &str) -> Option<u64> {
-    // main_keypad(&[]);
-    None
+    // huge thanks to https://www.reddit.com/r/adventofcode/comments/1hj2odw/comment/m34tgje
+    // for both parts
+
+    let mut acc = 0;
+
+    for line in input.lines() {
+        let input_vec: Vec<char> = line.chars().collect();
+        let result_main = main_keypad(&input_vec);
+        let result_robot_1 = robot_keypad(&result_main);
+        let result_robot_2 = robot_keypad(&result_robot_1);
+
+        let mut numeric_part = input_vec.clone();
+        numeric_part.truncate(input_vec.len() - 1);
+
+        let numeric_part_string: String = numeric_part.iter().collect();
+        let numeric: u64 = numeric_part_string
+            .parse()
+            .expect("Error parsing numeric part");
+        let result = (result_robot_2.len() as u64) * numeric;
+        acc += result;
+    }
+
+    Some(acc as u64)
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
-    None
+    part_two_robots(input, 25)
+}
+
+pub fn part_two_robots(input: &str, robots: u64) -> Option<u64> {
+    let mut acc = 0;
+
+    for line in input.lines() {
+        let input_vec: Vec<char> = line.chars().collect();
+        let result_main = main_keypad(&input_vec);
+
+        let mut cache = HashMap::new();
+        let result_robots = get_count_many_robots(&result_main, robots, 0, &mut cache);
+
+        let mut numeric_part = input_vec.clone();
+        numeric_part.truncate(input_vec.len() - 1);
+
+        let numeric_part_string: String = numeric_part.iter().collect();
+        let numeric: u64 = numeric_part_string
+            .parse()
+            .expect("Error parsing numeric part");
+        let result = (result_robots as u64) * numeric;
+        acc += result;
+    }
+
+    Some(acc as u64)
+}
+
+fn get_count_many_robots(
+    input: &Vec<char>,
+    max_robots: u64,
+    robot: u64,
+    cache: &mut HashMap<String, Vec<u64>>,
+) -> u64 {
+    let input_string: String = input.iter().collect();
+
+    // Avoid holding a mutable reference to `cache` for too long
+    if let Some(entry) = cache.get_mut(&input_string) {
+        if entry[robot as usize] != 0 {
+            return entry[robot as usize];
+        }
+    } else {
+        cache.insert(input_string.clone(), vec![0; max_robots as usize]);
+    }
+
+    let presses = robot_keypad(input);
+
+    // Re-acquire mutable reference after potential cache modification
+    let entry = cache.get_mut(&input_string).unwrap();
+    entry[0] = presses.len() as u64;
+
+    if robot == max_robots - 1 {
+        return presses.len() as u64;
+    }
+
+    let mut acc = 0;
+    let splitted_commands = split_command_by_enters(&presses);
+    for command in splitted_commands {
+        let count = get_count_many_robots(&command, max_robots, robot + 1, cache);
+        acc += count;
+    }
+
+    // Update the cache after recursion
+    let entry = cache.get_mut(&input_string).unwrap();
+    entry[robot as usize] = acc;
+
+    acc
+}
+
+fn split_command_by_enters(input: &Vec<char>) -> Vec<Vec<char>> {
+    let mut result: Vec<Vec<char>> = vec![];
+
+    let mut current: Vec<char> = vec![];
+    for press in input {
+        current.push(*press);
+        if *press == 'A' {
+            result.push(current);
+            current = vec![];
+        }
+    }
+    result
 }
 
 fn robot_keypad(input: &Vec<char>) -> Vec<char> {
+    /*
+    //     +---+---+
+    //     | ^ | A |
+    // +---+---+---+
+    // | < | v | > |
+    // +---+---+---+
+     */
+
     let mut keypad = HashMap::new();
     keypad.insert('_', Index { x: 0, y: 0 });
     keypad.insert('^', Index { x: 1, y: 0 });
@@ -31,42 +133,49 @@ fn robot_keypad(input: &Vec<char>) -> Vec<char> {
     let mut result = vec![];
 
     for target in input {
+        //dbg!(target);
         let target_index = &keypad[target];
         if current_index == *target_index {
             result.push('A');
             continue;
         }
 
-        if current_index.y > target_index.y {
-            // right-left then up
-            let second_command = if current_index.x < target_index.x {
-                '>'
+        let mut horizontal = vec![];
+        for _dx in 0..(current_index.x.abs_diff(target_index.x)) {
+            if current_index.x < target_index.x {
+                horizontal.push('>')
             } else {
-                '<'
+                horizontal.push('<')
             };
+        }
 
-            for _dx in 0..(current_index.x.abs_diff(target_index.x)) {
-                result.push(second_command);
-            }
+        let mut vertical = vec![];
+        for _dy in 0..(current_index.y.abs_diff(target_index.y)) {
+            if current_index.y < target_index.y {
+                vertical.push('v')
+            } else {
+                vertical.push('^')
+            };
+        }
 
-            for _dy in 0..(current_index.y - target_index.y) {
-                result.push('^');
-            }
+        // prioritization order:
+        // 1. moving with least turns
+        // 2. moving < over ^ over v over >
+
+        if current_index.x == 0 && target_index.y == 0 {
+            result.append(&mut horizontal);
+            result.append(&mut vertical);
+        } else if current_index.y == 0 && target_index.x == 0 {
+            result.append(&mut vertical);
+            result.append(&mut horizontal);
+        } else if current_index.x > target_index.x {
+            result.append(&mut horizontal);
+            result.append(&mut vertical);
+        } else if current_index.x <= target_index.x {
+            result.append(&mut vertical);
+            result.append(&mut horizontal);
         } else {
-            // down then right-left
-            for _dy in 0..(target_index.y - current_index.y) {
-                result.push('v');
-            }
-
-            let second_command = if current_index.x < target_index.x {
-                '>'
-            } else {
-                '<'
-            };
-
-            for _dx in 0..(current_index.x.abs_diff(target_index.x)) {
-                result.push(second_command);
-            }
+            todo!()
         }
 
         result.push('A');
@@ -77,25 +186,17 @@ fn robot_keypad(input: &Vec<char>) -> Vec<char> {
 }
 
 fn main_keypad(input: &Vec<char>) -> Vec<char> {
-    // populate keyboard
-    // let mut keyboard = Matrix {
-    //     size: Size { x: 3, y: 4 },
-    //     data: vec![],
-    // };
-    // keyboard.data.push(MapCell { value: Some('7') });
-    // keyboard.data.push(MapCell { value: Some('8') });
-    // keyboard.data.push(MapCell { value: Some('9') });
-    // keyboard.data.push(MapCell { value: Some('4') });
-    // keyboard.data.push(MapCell { value: Some('5') });
-    // keyboard.data.push(MapCell { value: Some('6') });
-    // keyboard.data.push(MapCell { value: Some('1') });
-    // keyboard.data.push(MapCell { value: Some('2') });
-    // keyboard.data.push(MapCell { value: Some('3') });
-    // keyboard.data.push(MapCell { value: None });
-    // keyboard.data.push(MapCell { value: Some('0') });
-    // keyboard.data.push(MapCell { value: Some('A') });
-
-    //keyboard.print();
+    /*
+    // +---+---+---+
+    // | 7 | 8 | 9 |
+    // +---+---+---+
+    // | 4 | 5 | 6 |
+    // +---+---+---+
+    // | 1 | 2 | 3 |
+    // +---+---+---+
+    //	   | 0 | A |
+    //	   +---+---+
+     */
 
     let mut keypad = HashMap::new();
     keypad.insert('7', Index { x: 0, y: 0 });
@@ -121,37 +222,43 @@ fn main_keypad(input: &Vec<char>) -> Vec<char> {
             continue;
         }
 
-        if current_index.y > target_index.y {
-            // need to go up then left-right
-            for _dy in 0..(current_index.y - target_index.y) {
-                result.push('^');
-            }
-
-            let second_command = if current_index.x < target_index.x {
-                '>'
+        let mut horizontal = vec![];
+        for _dx in 0..(current_index.x.abs_diff(target_index.x)) {
+            if current_index.x < target_index.x {
+                horizontal.push('>')
             } else {
-                '<'
+                horizontal.push('<')
             };
-
-            for _dx in 0..(current_index.x.abs_diff(target_index.x)) {
-                result.push(second_command);
-            }
-        } else {
-            // right-left and then down
-            let second_command = if current_index.x < target_index.x {
-                '>'
-            } else {
-                '<'
-            };
-
-            for _dx in 0..(current_index.x.abs_diff(target_index.x)) {
-                result.push(second_command);
-            }
-
-            for _dy in 0..(target_index.y - current_index.y) {
-                result.push('v');
-            }
         }
+
+        let mut vertical = vec![];
+        for _dy in 0..(current_index.y.abs_diff(target_index.y)) {
+            if current_index.y < target_index.y {
+                vertical.push('v')
+            } else {
+                vertical.push('^')
+            };
+        }
+
+        // prioritization order:
+        // 1. moving with least turns
+        // 2. moving < over ^ over v over >
+        if current_index.y == 3 && target_index.x == 0 {
+            result.append(&mut vertical);
+            result.append(&mut horizontal);
+        } else if current_index.x == 0 && target_index.y == 3 {
+            result.append(&mut horizontal);
+            result.append(&mut vertical);
+        } else if current_index.x > target_index.x {
+            result.append(&mut horizontal);
+            result.append(&mut vertical);
+        } else if current_index.x <= target_index.x {
+            result.append(&mut vertical);
+            result.append(&mut horizontal);
+        } else {
+            todo!()
+        }
+
         result.push('A');
         current_index = *target_index;
     }
@@ -159,179 +266,10 @@ fn main_keypad(input: &Vec<char>) -> Vec<char> {
     result
 }
 
-#[derive(Debug, Clone)]
-struct MapCell {
-    value: Option<char>,
-    // index: Index,
-}
-
-#[derive(Debug, Copy, Clone, Eq, Hash, PartialEq)]
-struct Size {
-    x: usize,
-    y: usize,
-}
-
 #[derive(Debug, Copy, Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 struct Index {
     x: usize,
     y: usize,
-}
-
-impl Index {
-    fn up<T>(&self, _matrix: &Matrix<T>) -> Option<Index> {
-        if self.y == 0 {
-            return None;
-        }
-        Some(Index {
-            x: self.x,
-            y: self.y - 1,
-        })
-    }
-
-    fn left<T>(&self, _matrix: &Matrix<T>) -> Option<Index> {
-        if self.x == 0 {
-            return None;
-        }
-        Some(Index {
-            x: self.x - 1,
-            y: self.y,
-        })
-    }
-
-    fn down<T>(&self, matrix: &Matrix<T>) -> Option<Index> {
-        if self.y == matrix.size.y - 1 {
-            return None;
-        }
-        Some(Index {
-            x: self.x,
-            y: self.y + 1,
-        })
-    }
-
-    fn right<T>(&self, matrix: &Matrix<T>) -> Option<Index> {
-        if self.x == matrix.size.x - 1 {
-            return None;
-        }
-        Some(Index {
-            x: self.x + 1,
-            y: self.y,
-        })
-    }
-
-    fn navigate_to<T>(&self, matrix: &Matrix<T>, direction: &Direction) -> Option<Index> {
-        match direction {
-            Direction::Up => self.up(matrix),
-            Direction::Down => self.down(matrix),
-            Direction::Left => self.left(matrix),
-            Direction::Right => self.right(matrix),
-        }
-    }
-}
-
-#[derive(Debug, Eq, Hash, PartialEq, Clone, Copy, PartialOrd, Ord, EnumIter)]
-enum Direction {
-    Up,
-    Left,
-    Right,
-    Down,
-}
-
-impl Direction {
-    #[allow(dead_code)]
-    fn reverse(&self) -> Direction {
-        match self {
-            Direction::Up => Direction::Down,
-            Direction::Left => Direction::Right,
-            Direction::Right => Direction::Left,
-            Direction::Down => Direction::Up,
-        }
-    }
-
-    #[allow(dead_code)]
-    fn turn_right(&self) -> Direction {
-        match self {
-            Direction::Up => Direction::Right,
-            Direction::Right => Direction::Down,
-            Direction::Down => Direction::Left,
-            Direction::Left => Direction::Up,
-        }
-    }
-
-    #[allow(dead_code)]
-    fn turn_left(&self) -> Direction {
-        match self {
-            Direction::Up => Direction::Left,
-            Direction::Left => Direction::Down,
-            Direction::Down => Direction::Right,
-            Direction::Right => Direction::Up,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-struct Matrix<T> {
-    size: Size,
-    data: Vec<T>,
-}
-
-impl<T> Matrix<T> {
-    fn get_index_from_position(&self, indx: usize) -> Index {
-        let y = indx / self.size.x;
-        let x = indx - y * self.size.x;
-        Index { x, y }
-    }
-}
-
-impl Matrix<MapCell> {
-    fn has_index(&self, index: &Index) -> bool {
-        self.size.x > index.x && self.size.y > index.y
-    }
-
-    #[allow(dead_code)]
-    fn print(&self) {
-        for y in 0..self.size.y {
-            for x in 0..self.size.x {
-                let mut ch = '.';
-                if let Some(x) = self[y][x].value {
-                    ch = x
-                }
-                print!("{}", ch);
-            }
-            println!();
-        }
-    }
-}
-
-impl Matrix<bool> {
-    #[allow(dead_code)]
-    fn print(&self) {
-        for y in 0..self.size.y {
-            for x in 0..self.size.x {
-                let mut ch = '.';
-                if self[y][x] {
-                    ch = '0'
-                }
-                print!("{}", ch);
-            }
-            println!();
-        }
-    }
-}
-
-impl<T> std::ops::Index<usize> for Matrix<T> {
-    type Output = [T];
-
-    fn index(&self, row: usize) -> &[T] {
-        let start = row * self.size.x;
-        &self.data[start..start + self.size.x]
-    }
-}
-
-impl<T> std::ops::IndexMut<usize> for Matrix<T> {
-    fn index_mut(&mut self, row: usize) -> &mut [T] {
-        let start = row * self.size.x;
-        &mut self.data[start..start + self.size.x]
-    }
 }
 
 #[cfg(test)]
@@ -445,12 +383,12 @@ mod tests {
     #[test]
     fn test_part_one() {
         let result = part_one(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(126384));
     }
 
     #[test]
-    fn test_part_two() {
-        let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+    fn test_part_two_same_as_part_1() {
+        let result = part_two_robots(&advent_of_code::template::read_file("examples", DAY), 2);
+        assert_eq!(result, Some(126384));
     }
 }
