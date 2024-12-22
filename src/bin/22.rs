@@ -1,4 +1,8 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::{Arc, Mutex},
+    thread,
+};
 
 advent_of_code::solution!(22);
 
@@ -17,7 +21,7 @@ pub fn part_one(input: &str) -> Option<u64> {
     Some(result)
 }
 
-pub fn part_two(input: &str) -> Option<u64> {
+pub fn part_two_single_thread(input: &str) -> Option<u64> {
     // thanks to https://www.reddit.com/r/adventofcode/comments/1hjroap/comment/m393l1y/
     // for general idea.
 
@@ -71,6 +75,87 @@ pub fn part_two(input: &str) -> Option<u64> {
 
     let max = diff_dict.values().max().unwrap();
     Some(*max)
+}
+
+pub fn part_two(input: &str) -> Option<u64> {
+    // gpt helped multithread version
+
+    let mut secrets: Vec<u64> = Vec::new();
+    input
+        .lines()
+        .for_each(|l| secrets.push(l.parse().expect("Expected u64")));
+
+    let diff_dict = Arc::new(Mutex::new(HashMap::new()));
+
+    // Create a thread pool and split the work
+    let mut handles = vec![];
+    let secrets_per_thread = secrets.len() / 8; // Adjust the number of threads as needed
+
+    for chunk in secrets.chunks(secrets_per_thread) {
+        let diff_dict = Arc::clone(&diff_dict);
+        let chunk = chunk.to_vec(); // Copy the chunk for thread ownership
+
+        let handle = thread::spawn(move || {
+            let mut local_diff_dict = HashMap::new();
+
+            for mut secret in chunk {
+                let mut current_sequence = Vec::new();
+                let mut sequence_set = HashSet::new();
+
+                let mut prev_price = get_price(&secret);
+
+                for _ in 0..=2000 {
+                    let current_price = get_price(&secret);
+                    let diff = get_price_diff(&current_price, &prev_price);
+                    prev_price = current_price;
+
+                    current_sequence.push(diff);
+
+                    if current_sequence.len() > 4 {
+                        current_sequence.remove(0);
+                    }
+
+                    if current_sequence.len() > 3 {
+                        if !sequence_set.contains(&current_sequence) {
+                            sequence_set.insert(current_sequence.clone());
+
+                            local_diff_dict
+                                .entry(current_sequence.clone())
+                                .and_modify(|e| {
+                                    *e += current_price;
+                                })
+                                .or_insert(current_price);
+                        }
+                    }
+
+                    prg(&mut secret);
+                }
+            }
+
+            // Merge local results into the shared HashMap
+            let mut global_diff_dict = diff_dict.lock().unwrap();
+            for (key, value) in local_diff_dict {
+                global_diff_dict
+                    .entry(key)
+                    .and_modify(|e| {
+                        *e += value;
+                    })
+                    .or_insert(value);
+            }
+        });
+
+        handles.push(handle);
+    }
+
+    // Wait for all threads to finish
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    // Find the maximum value in the shared HashMap
+    let diff_dict = diff_dict.lock().unwrap();
+    let max = diff_dict.values().max().cloned().unwrap();
+    Some(max)
 }
 
 fn prg_n(secret: &mut u64, iteration: u64) {
@@ -171,6 +256,14 @@ mod tests {
             "examples", DAY, 1,
         ));
         assert_eq!(result, Some(37327623));
+    }
+
+    #[test]
+    fn test_part_two_single_thread() {
+        let result = part_two_single_thread(&advent_of_code::template::read_file_part(
+            "examples", DAY, 2,
+        ));
+        assert_eq!(result, Some(23));
     }
 
     #[test]
