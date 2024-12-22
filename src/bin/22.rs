@@ -115,6 +115,7 @@ pub fn part_two(input: &str) -> Option<u64> {
                         current_sequence.remove(0);
                     }
 
+                    #[allow(clippy::collapsible_if)]
                     if current_sequence.len() > 3 {
                         if !sequence_set.contains(&current_sequence) {
                             sequence_set.insert(current_sequence.clone());
