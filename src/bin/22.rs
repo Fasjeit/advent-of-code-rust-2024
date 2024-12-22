@@ -29,7 +29,7 @@ pub fn part_two(input: &str) -> Option<u128> {
         .lines()
         .for_each(|l| secrets.push(l.parse().expect("Expected u128")));
 
-    let mut price_list = Vec::new();
+    let mut diff_dict = HashMap::new();
 
     for t in secrets {
         //dbg!(t);
@@ -48,21 +48,13 @@ pub fn part_two(input: &str) -> Option<u128> {
         }
 
         //dbg!(&current_prices);
-        price_list.push(current_prices);
-    }
 
-    //todo!();
-
-    let mut diff_dict = HashMap::new();
-    //let mut dbg_cnt = 300;
-
-    for t in price_list {
         let mut current_sequence = Vec::new();
         let mut sequence_set = HashSet::new();
-        let mut prev_num = t[0]; // Start with the first price.
+        let mut prev_num = current_prices[0]; // Start with the first price.
 
-        for n in 1..t.len() {
-            let next_num = t[n];
+        for n in 1..current_prices.len() {
+            let next_num = current_prices[n];
             let diff = get_price_diff(&next_num, &prev_num);
             prev_num = next_num; // Update `prev_num` here.
 
@@ -89,16 +81,7 @@ pub fn part_two(input: &str) -> Option<u128> {
                     *e += next_num;
                 })
                 .or_insert(next_num);
-
-            //dbg!(dbg_cnt);
-            //dbg!(n);
-            //dbg!(diff_dict[&current_sequence]); // Debug print for verification.
         }
-
-        // dbg_cnt -= 1;
-        // if dbg_cnt == 0 {
-        //     break;
-        // }
     }
 
     let max = diff_dict.values().max().unwrap();
