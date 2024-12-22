@@ -89,7 +89,7 @@ pub fn part_two(input: &str) -> Option<u64> {
 
     // Create a thread pool and split the work
     let mut handles = vec![];
-    let secrets_per_thread = secrets.len() / 8; // Adjust the number of threads as needed
+    let secrets_per_thread = secrets.len() / 4; // Adjust the number of threads as needed
 
     for chunk in secrets.chunks(secrets_per_thread) {
         let diff_dict = Arc::clone(&diff_dict);
