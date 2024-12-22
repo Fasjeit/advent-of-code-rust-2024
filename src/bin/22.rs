@@ -1,17 +1,14 @@
-use std::{
-    collections::{HashMap, HashSet},
-    env::current_exe,
-};
+use std::collections::{HashMap, HashSet};
 
 advent_of_code::solution!(22);
 
-pub fn part_one(input: &str) -> Option<u128> {
-    let mut secrets: Vec<u128> = Vec::new();
+pub fn part_one(input: &str) -> Option<u64> {
+    let mut secrets: Vec<u64> = Vec::new();
     input
         .lines()
-        .for_each(|l| secrets.push(l.parse().expect("Expected u128")));
+        .for_each(|l| secrets.push(l.parse().expect("Expected u64")));
 
-    let result = secrets.iter().fold(0, |acc: u128, s| {
+    let result = secrets.iter().fold(0, |acc: u64, s| {
         let mut secret = *s;
         prg_n(&mut secret, 2000);
         acc + secret
@@ -20,67 +17,55 @@ pub fn part_one(input: &str) -> Option<u128> {
     Some(result)
 }
 
-pub fn part_two(input: &str) -> Option<u128> {
+pub fn part_two(input: &str) -> Option<u64> {
     // thanks to https://www.reddit.com/r/adventofcode/comments/1hjroap/comment/m393l1y/
     // for general idea.
 
-    let mut secrets: Vec<u128> = Vec::new();
+    let mut secrets: Vec<u64> = Vec::new();
     input
         .lines()
-        .for_each(|l| secrets.push(l.parse().expect("Expected u128")));
+        .for_each(|l| secrets.push(l.parse().expect("Expected u64")));
 
     let mut diff_dict = HashMap::new();
 
-    for t in secrets {
-        //dbg!(t);
-        let mut current_prices = Vec::new();
-        let last_price = get_price(&t);
-        current_prices.push(last_price);
-
-        let mut current = t;
-
-        for _iteration in 0..2000 {
-            let mut nex_num = current;
-            prg(&mut nex_num);
-            let current_price = get_price(&nex_num);
-            current_prices.push(current_price);
-            current = nex_num;
-        }
-
-        //dbg!(&current_prices);
-
+    for mut secret in secrets {
         let mut current_sequence = Vec::new();
         let mut sequence_set = HashSet::new();
-        let mut prev_num = current_prices[0]; // Start with the first price.
 
-        for n in 1..current_prices.len() {
-            let next_num = current_prices[n];
-            let diff = get_price_diff(&next_num, &prev_num);
-            prev_num = next_num; // Update `prev_num` here.
+        // Process the initial value
+        let mut prev_price = get_price(&secret);
+
+        // Iterate through 2001 prices (initial + 2000 iterations)
+        for _ in 0..=2000 {
+            let current_price = get_price(&secret);
+
+            // Calculate the difference and manage the sequence
+            let diff = get_price_diff(&current_price, &prev_price);
+            prev_price = current_price;
 
             current_sequence.push(diff);
 
-            // Manage sequence length:
             if current_sequence.len() > 4 {
-                current_sequence.remove(0); // Remove first element if too long.
-            }
-            if current_sequence.len() <= 3 {
-                continue; // Skip if the sequence is too short.
+                current_sequence.remove(0); // Keep the last 4 elements
             }
 
-            // Add unique sequence to `sequence_set`:
-            if sequence_set.contains(&current_sequence) {
-                continue; // Skip duplicate sequences.
-            }
-            sequence_set.insert(current_sequence.clone());
+            if current_sequence.len() > 3 {
+                // Update `diff_dict` if the sequence is new
+                if !sequence_set.contains(&current_sequence) {
+                    sequence_set.insert(current_sequence.clone());
 
-            // Update `diff_dict` for the sequence:
-            diff_dict
-                .entry(current_sequence.clone())
-                .and_modify(|e| {
-                    *e += next_num;
-                })
-                .or_insert(next_num);
+                    // add to or update the diff_dict
+                    diff_dict
+                        .entry(current_sequence.clone())
+                        .and_modify(|e| {
+                            *e += current_price;
+                        })
+                        .or_insert(current_price);
+                }
+            }
+
+            // Update the next number using `prg`
+            prg(&mut secret);
         }
     }
 
@@ -88,13 +73,13 @@ pub fn part_two(input: &str) -> Option<u128> {
     Some(*max)
 }
 
-fn prg_n(secret: &mut u128, iteration: u128) {
+fn prg_n(secret: &mut u64, iteration: u64) {
     for _i in 0..iteration {
         prg(secret);
     }
 }
 
-fn prg(secret: &mut u128) {
+fn prg(secret: &mut u64) {
     // step 1
     let to_mix = *secret * 64;
     mix(secret, to_mix);
@@ -111,19 +96,19 @@ fn prg(secret: &mut u128) {
     prune(secret);
 }
 
-fn mix(secret: &mut u128, value: u128) {
-    *secret = *secret ^ value;
+fn mix(secret: &mut u64, value: u64) {
+    *secret ^= value;
 }
 
-fn prune(secret: &mut u128) {
-    *secret = *secret % 16777216;
+fn prune(secret: &mut u64) {
+    *secret %= 16777216;
 }
 
-fn get_price(secret: &u128) -> u128 {
+fn get_price(secret: &u64) -> u64 {
     secret % 10
 }
 
-fn get_price_diff(current_price: &u128, last_price: &u128) -> i64 {
+fn get_price_diff(current_price: &u64, last_price: &u64) -> i64 {
     *current_price as i64 - *last_price as i64
 }
 

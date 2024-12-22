@@ -26,7 +26,7 @@ pub fn part_one(input: &str) -> Option<u64> {
         acc += result;
     }
 
-    Some(acc as u64)
+    Some(acc)
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
@@ -54,7 +54,7 @@ pub fn part_two_robots(input: &str, robots: u64) -> Option<u64> {
         acc += result;
     }
 
-    Some(acc as u64)
+    Some(acc)
 }
 
 fn get_count_many_robots(
@@ -256,6 +256,7 @@ fn main_keypad(input: &Vec<char>) -> Vec<char> {
         // prioritization order:
         // 1. moving with least turns
         // 2. moving < over ^ over v over >
+        #[allow(clippy::if_same_then_else)]
         if current_index.y == 3 && target_index.x == 0 {
             result.append(&mut vertical);
             result.append(&mut horizontal);
