@@ -1,3 +1,4 @@
+use indexmap::IndexMap;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 
@@ -77,45 +78,42 @@ pub fn part_two(input: &str) -> Option<String> {
     let lines = input.lines();
 
     // node - connections
-    let mut nodes: HashMap<&str, HashSet<&str>> = HashMap::new();
+    // Use IndexMap for deterministic iteration over keys.
+    let mut nodes: IndexMap<&str, HashSet<&str>> = IndexMap::new();
 
     for line in lines {
         let mut iter = line.split('-');
         let src = iter.next().expect("Expected pair");
         let dst = iter.next().expect("Expected pair");
 
-        nodes
-            .entry(src)
-            .and_modify(|v| {
-                v.insert(dst);
-            })
-            .or_insert({
-                let mut set = HashSet::new();
-                set.insert(dst);
-                set
-            });
-
-        nodes
-            .entry(dst)
-            .and_modify(|v: &mut HashSet<&str>| {
-                v.insert(src);
-            })
-            .or_insert({
-                let mut set = HashSet::new();
-                set.insert(src);
-                set
-            });
+        nodes.entry(src).or_default().insert(dst);
+        nodes.entry(dst).or_default().insert(src);
     }
 
     // clique is just a set of nodes
     let mut cliques: Vec<HashSet<&str>> = Vec::new();
+
     for (node, connections) in nodes {
-        // add to any clique that this mode have all connections
-        for clique in &mut cliques {
+        // if node == "de" || node == "ka" || node == "co" || node == "ta" {
+        //     dbg!(&node);
+        // }
+
+        // add to any clique that this node have all connections
+        // also copy the clique, as a-b can be both an a-b-c and a-b-d
+        // and create new own clique for a node
+        let mut cliques_to_add: Vec<HashSet<&str>> = Vec::new();
+
+        for clique in &cliques {
             if clique.iter().all(|n| connections.contains(n)) {
-                clique.insert(node);
+                let mut new_clique = clique.clone();
+                new_clique.insert(node);
+                cliques_to_add.push(new_clique);
             }
         }
+
+        // add new cliques
+        cliques.append(&mut cliques_to_add);
+
         // create new clique for a node
         cliques.push({
             let mut hs = HashSet::new();
@@ -124,7 +122,7 @@ pub fn part_two(input: &str) -> Option<String> {
         });
     }
 
-    dbg!(&cliques);
+    //dbg!(&cliques);
     let biggest_clique = cliques
         .iter()
         .sorted_by(|a, b| Ord::cmp(&b.len(), &a.len()))
