@@ -25,6 +25,9 @@ pub fn part_two_single_thread(input: &str) -> Option<u64> {
     // thanks to https://www.reddit.com/r/adventofcode/comments/1hjroap/comment/m393l1y/
     // for general idea.
 
+    // just wait for sequence of length 3
+    // compute its cvalue and store in dictionary.
+
     let mut secrets: Vec<u64> = Vec::new();
     input
         .lines()
