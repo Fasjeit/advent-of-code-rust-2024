@@ -1,13 +1,64 @@
-use std::{
-    collections::{HashMap, HashSet},
-    io::LineWriter,
-};
+use std::collections::HashMap;
 
 use itertools::Itertools;
 
 advent_of_code::solution!(24);
 
 pub fn part_one(input: &str) -> Option<u64> {
+    let mut circuit = parse_circuit(input);
+
+    circuit.exe();
+    let result = circuit.output();
+
+    Some(result)
+}
+
+pub fn part_two(input: &str) -> Option<String> {
+    // thanks to https://www.reddit.com/r/adventofcode/comments/1hl698z/comment/m3mrika/
+    // and all other comments for general gate checking idea.
+
+    // The main thing is the circuit is 44x44 -> 44 + cary adder
+    // each a-b-c => z-c
+    // and consists of two half adders
+    /* art by https://www.reddit.com/r/adventofcode/comments/1hl698z/comment/m3l9glk/
+
+    x00──┬─────┐
+     │    XOR──z00
+    y00────┬───┘
+     │ │
+     │ └───┐
+     │    AND──mgk
+     └─────┘
+
+    x01──┬─────┐
+         │    XOR[rkf]┬────┐
+    y01────┬───┘      │   XOR──────z01
+         │ │          │    │
+    mgk──────┬─────────────┘
+         │ │ │        │
+         │ │ │        │
+         │ │ │       AND[kmj]──┐
+         │ │ └────────┘        OR──rwp
+         │ └──────────┐        │
+         │           AND[nfw]──┘
+         └────────────┘
+    */
+
+    // So we need each gate can only appear in certain configuration.
+    // check_gates_correctness do all the checks, paying attention to
+    // x00-y00 and z45 (last cary output).
+    // Test showed* it is not 100 reliable, but seems to work with real task data.
+    // * - sometimes I saw only one output when swapping outputs, and sometimes even inf cycle.
+    // maybe only if swapping outputs that do not involve in z computations in any way.
+
+    let circuit = parse_circuit(input);
+
+    let result = circuit.check_gates_correctness();
+
+    Some(result)
+}
+
+fn parse_circuit(input: &str) -> Circuit {
     let mut data: Vec<&str> = input.split("\r\n\r\n").collect();
     if data.len() < 2 {
         // Actual data split.
@@ -45,40 +96,30 @@ pub fn part_one(input: &str) -> Option<u64> {
         operations
             .entry(result_key.to_string())
             .or_insert(Operation {
-                gate: gate,
+                gate,
                 operand_1: first_key.to_string(),
                 operand_2: second_key.to_string(),
             });
     }
 
-    //let inverse_opratetion: HashMap<(&'a str, &'a str), Operation> = HashMap::new();
-
-    let mut circuit = Circuit {
+    let circuit = Circuit {
         operands,
         operations,
-        //inverse_opratetion,
     };
 
-    circuit.exe();
-    let result = circuit.output();
-
-    Some(result)
-}
-
-pub fn part_two(input: &str) -> Option<u64> {
-    None
+    #[allow(clippy::let_and_return)]
+    circuit
 }
 
 struct Circuit {
     operands: HashMap<String, u8>,
     operations: HashMap<String, Operation>,
-    //inverse_opratetion: HashMap<(&'a str, &'a str), Operation>,
 }
 
 impl Circuit {
     fn exe(&mut self) {
         let mut to_compute = self.operations.clone();
-        while to_compute.len() != 0 {
+        while !to_compute.is_empty() {
             let mut not_computed = HashMap::new();
             for (value, operation) in to_compute {
                 if self.operands.contains_key(&operation.operand_1)
@@ -102,7 +143,6 @@ impl Circuit {
     }
 
     fn output(&self) -> u64 {
-        let mut index = 0;
         let mut result: u64 = 0;
 
         let mut output_indexes: Vec<&String> = self
@@ -117,87 +157,40 @@ impl Circuit {
         for key in output_indexes {
             result <<= 1;
             result += self.operands[key] as u64;
-            index += 1;
         }
         result
     }
 
-    // fn inverse_operation_find(&self, first: &str, second: &str) -> Option<Operation> {
-    //     if self.inverse_opratetion.contains_key(&(first, second)) {
-    //         return Some(self.inverse_opratetion[&(first, second)].clone());
-    //     } else if self.inverse_opratetion.contains_key(&(second, first)) {
-    //         return Some(self.inverse_opratetion[&(first, second)].clone());
-    //     }
-    //     None
-    // }
+    fn check_gates_correctness(&self) -> String {
+        let mut incorrect_gates = vec![];
 
-    // fn check_connections(&self) {
-    //     for i in 0..45 {
-    //         let index = if i < 10 {
-    //             format!("0{}", i)
-    //         } else {
-    //             i.to_string()
-    //         };
+        for (c, operation) in &self.operations {
+            let a = &operation.operand_1;
+            let b = &operation.operand_2;
+            let op = &operation.gate;
 
-    //         let x_index = format!("x{}", index);
-    //         let y_index = format!("y{}", index);
-    //         let z_index = format!("z{}", index);
+            if (c.starts_with("z") && *op != Gate::Xor && c != "z45")
+                || (*op == Gate::Xor && [a, b, c].iter().all(|x| !x.starts_with(['x', 'y', 'z'])))
+                || (*op == Gate::And
+                    && a != "x00"
+                    && b != "x00"
+                    && self.operations.values().any(|operation| {
+                        (*c == operation.operand_1 || *c == operation.operand_2)
+                            && operation.gate != Gate::Or
+                    }))
+                || (*op == Gate::Xor
+                    && self.operations.values().any(|operation| {
+                        (*c == operation.operand_1 || *c == operation.operand_2)
+                            && operation.gate == Gate::Or
+                    }))
+            {
+                incorrect_gates.push(c);
+            }
+        }
 
-    //         // first xor
-    //         let xor_1 = self.inverse_operation_find(&x_index, &y_index);
-    //         let mut xor_1_result = "".to_string();
-    //         if let Some(x) = xor_1 {
-    //             match x.gate {
-    //                 Gate::Xor => xor_1_result = x.result,
-    //                 _ => panic!(),
-    //             }
-    //         }
-
-    //         // first and
-    //         let and_1 = self.inverse_operation_find(&x_index, &y_index
-    //     }
-    // }
-
-    //     fn outputv2(&self) -> u64 {
-    //         let mut output_indexes: Vec<&String> = self
-    //             .operands
-    //             .keys()
-    //             .filter(|k| k.starts_with("z"))
-    //             .collect();
-
-    //         output_indexes.sort();
-
-    //         let mut carry = 0;
-    //         for key in output_indexes {
-    //             let c_result = self.operands[key] as u64;
-
-    //             let x_index = format!("x{}", &key[1..]);
-    //             let y_index = format!("y{}", &key[1..]);
-
-    //             let true_result = self.operands[&x_index] ^ self.operands[&y_index] ^ carry;
-    //             let next_carry = (self.operands[&x_index] & self.operands[&y_index])
-    //                 | (carry & (self.operands[&x_index] ^ self.operands[&y_index]));
-
-    //             if self.operands.contains_key(&x_index) {
-    //                 println!(
-    //                     "{}: {} + {} = {} + ?",
-    //                     &key[1..],
-    //                     self.operands[&x_index],
-    //                     self.operands[&y_index],
-    //                     self.operands[key]
-    //                 );
-
-    //                 if self.operands[key] != true_result {
-    //                     print!("ERROR HERE!");
-    //                     print!("carry is {}", carry);
-    //                 }
-    //                 println!();
-
-    //                 carry = next_carry;
-    //             }
-    //         }
-    //         1337
-    //     }
+        incorrect_gates.sort();
+        incorrect_gates.iter().join(",")
+    }
 }
 
 #[derive(Clone)]
@@ -205,21 +198,14 @@ struct Operation {
     gate: Gate,
     operand_1: String,
     operand_2: String,
-    // result: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 enum Gate {
     And,
     Or,
     Xor,
 }
-
-// #[derive(Clone)]
-// struct Operand {
-//     name: String,
-//     value: Option<u8>,
-// }
 
 #[cfg(test)]
 mod tests {
@@ -242,8 +228,20 @@ mod tests {
     }
 
     #[test]
-    fn test_part_two() {
-        let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+    fn test_part_two_1() {
+        // correctly working
+        let result = part_two(&advent_of_code::template::read_file_part(
+            "examples", DAY, 3,
+        ));
+        assert_eq!(result, Some("".to_string()));
+    }
+
+    #[test]
+    fn test_part_two_2() {
+        // one swap
+        let result = part_two(&advent_of_code::template::read_file_part(
+            "examples", DAY, 4,
+        ));
+        assert_eq!(result, Some("ccc,z01".to_string()));
     }
 }
