@@ -22,7 +22,7 @@
 22 - 4.5 (probably more like 3.8, but i am feeling exhausted)
 23 - 3
 24 - 5 (probably more like 4.5, but i have my brain melted)
-25
+25 - 1
 
 1 - just code it
 2 - easy one with a twist
