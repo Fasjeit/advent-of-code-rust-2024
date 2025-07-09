@@ -73,19 +73,20 @@ Solutions for [Advent of Code](https://adventofcode.com/) in [Rust](https://www.
 ---
 
 ## Useful primitives
-|            Day            |                           Algo                            |
-| :-----------------------: | :-------------------------------------------------------: |
-| [Day 5](./src/bin/05.rs)  |                           `dfs`                           |
-| [Day 7](./src/bin/07.rs)  |                           `dfs`                           |
-| [Day 10](./src/bin/10.rs) |                           `dfs`                           |
-| [Day 12](./src/bin/12.rs) |                     `corner counter`                      |
-| [Day 13](./src/bin/13.rs) |                 `linear eq system solver`                 |
-| [Day 15](./src/bin/15.rs) |          `collision detection and move objects`           |
-| [Day 16](./src/bin/16.rs) |       `muti-dim dijkstra for "pay-to-turn" graphs`        |
-| [Day 17](./src/bin/17.rs) |                 `state machine emulator`                  |
-| [Day 18](./src/bin/18.rs) |         `dijkstra: find path became unreachable`          |
-| [Day 20](./src/bin/20.rs) | `reverse Dijkstra: find all possible paths to the target` |
-| [Day 23](./src/bin/23.rs) |                   `max clique problem`                    |
+|            Day            |                                 Algo                                  |
+| :-----------------------: | :-------------------------------------------------------------------: |
+| [Day 5](./src/bin/05.rs)  |                                 `dfs`                                 |
+| [Day 7](./src/bin/07.rs)  |                                 `dfs`                                 |
+| [Day 10](./src/bin/10.rs) |                                 `dfs`                                 |
+| [Day 12](./src/bin/12.rs) |                           `corner counter`                            |
+| [Day 13](./src/bin/13.rs) |                       `linear eq system solver`                       |
+| [Day 15](./src/bin/15.rs) |                `collision detection and move objects`                 |
+| [Day 16](./src/bin/16.rs) | `muti-dim dijkstra for "pay-to-turn" graphs, map agent with rotation` |
+| [Day 17](./src/bin/17.rs) |                       `state machine emulator`                        |
+| [Day 18](./src/bin/18.rs) |               `dijkstra: find path became unreachable`                |
+| [Day 20](./src/bin/20.rs) |       `reverse Dijkstra: find all possible paths to the target`       |
+| [Day 23](./src/bin/23.rs) |                         `max clique problem`                          |
+
 
 ## Template setup
 
