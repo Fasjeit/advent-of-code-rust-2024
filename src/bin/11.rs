@@ -65,7 +65,7 @@ fn blink_count(count: &mut HashMap<u64, u128>) -> HashMap<u64, u128> {
         let stone_numbers = count[stone];
         if *stone == 0 {
             add_n_or_create(&mut result, 1, stone_numbers);
-        } else if base_10_len(*stone) % 2 == 0 {
+        } else if base_10_len(*stone).is_multiple_of(2) {
             // split stone
             let half_ord = base_10_len(*stone) / 2;
             let pow = 10_u64.pow(half_ord);
@@ -88,7 +88,7 @@ fn blink(data: &mut Vec<u64>) -> Vec<u64> {
     for stone in data {
         if *stone == 0 {
             result.push(1);
-        } else if base_10_len(*stone) % 2 == 0 {
+        } else if base_10_len(*stone).is_multiple_of(2) {
             // split stone
             let half_ord = base_10_len(*stone) / 2;
             let pow = 10_u64.pow(half_ord);

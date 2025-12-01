@@ -122,7 +122,7 @@ fn solve_part_2_task(A: Index, B: Index, T: Index) -> u64 {
     let y_u = T.x - A.x * x;
     let y_b = B.x;
 
-    if y_u % y_b != 0 {
+    if !y_u.is_multiple_of(y_b) {
         return 0;
     }
 
