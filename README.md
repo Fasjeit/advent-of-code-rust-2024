@@ -84,7 +84,7 @@ Solutions for [Advent of Code](https://adventofcode.com/) in [Rust](https://www.
 | [Day 16](./src/bin/16.rs) | `muti-dim dijkstra for "pay-to-turn" graphs, map agent with rotation` |
 | [Day 17](./src/bin/17.rs) |                       `state machine emulator`                        |
 | [Day 18](./src/bin/18.rs) |               `dijkstra: find path became unreachable`                |
-| [Day 20](./src/bin/20.rs) |       `reverse Dijkstra: find all possible paths to the target`       |
+| [Day 20](./src/bin/20.rs) |            `reverse Dijkstra: find all possible path cuts`            |
 | [Day 23](./src/bin/23.rs) |                         `max clique problem`                          |
 
 
