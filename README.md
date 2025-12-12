@@ -4,6 +4,8 @@
 
 Solutions for [Advent of Code](https://adventofcode.com/) in [Rust](https://www.rust-lang.org/).
 
+NB. It is required to trim the last empty line at the input data to work correctly.
+
 <!--- advent_readme_stars table --->
 ## 2024 Results
 
